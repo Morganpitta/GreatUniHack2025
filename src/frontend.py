@@ -1,4 +1,4 @@
-from init_db import app, login_manager, db
+from init_db import app, login_manager, db, socketio
 from database import User, Message
 
 from sqlalchemy import or_
@@ -7,6 +7,9 @@ from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError
 from flask_login import login_user, logout_user, current_user, login_required
 from flask import render_template, request, redirect, url_for, flash
+from flask_socketio import emit
+
+import chat_socket
 
 
 @login_manager.user_loader
@@ -123,6 +126,17 @@ def chat(username):
                       content=form.message.data)
         db.session.add(msg)
         db.session.commit()
+
+        print(f"broadcasting message {partner.id}, {current_user.id}")
+        # Notify receiver instantly
+        socketio.emit('receive_message', {
+            'sender': current_user.id,
+            'text': form.message.data,
+            'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M')
+        }, room=partner.id)
+
+        print("broadcasted")
+    
         return redirect(url_for('chat', username=username))
 
     messages = Message.query.filter(

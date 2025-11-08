@@ -26,7 +26,7 @@
 
     <div class="chat-area">
         <h2>Chat with {{ partner.username }}</h2>
-        <div class="message-history">
+        <div class="message-history" id = "message-history">
             {% for message in messages %}
                 <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
                     <p>{{ message.content }}</p>
@@ -45,8 +45,9 @@
     </div>
 </div>
 
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function() {
         const messageInput = document.getElementById('message-input');
         if (messageInput) {
             messageInput.addEventListener('keypress', function(e) {
@@ -57,5 +58,23 @@
             });
         }
     });
+
+  const socket = io();
+
+  socket.emit('join', {username:"{{current_user.id}}"});
+
+  socket.on('receive_message', (data) => {
+    console.log( data );
+    
+    if (data.sender == "{{partner.username}}") {
+      const li = document.createElement('li');
+      li.innerHTML = 
+       `<div class="message received">
+                    <p>${data.text}</p>
+                    <span class="timestamp">${data.timestamp}</span>
+        </div>`;
+      document.getElementById('message-history').appendChild(li);
+    }
+  });
 </script>
 {% endblock %}
