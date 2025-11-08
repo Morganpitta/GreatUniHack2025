@@ -65,12 +65,7 @@ class Firestore:
 
 if __name__ == "__main__":
 
-    texts = [
-        "What is the meaning of life?",
-        "What is the purpose of existence?",
-        "How do I bake a cake?"]
-
-    # Calculate cosine similarity. Higher scores = greater semantic similarity.
+    texts = ["Mars is a really beautiful planet", "Mars has lots of trees on it's surface"]
 
     embed = Embedder("gemini-embedding-001")
     embedding = embed.embed_content(texts, "RETRIEVAL_DOCUMENT")
@@ -84,7 +79,6 @@ if __name__ == "__main__":
     embedding_response = embed.embed_content(user_query, "RETRIEVAL_QUERY")
     
     similar = store.find_similar(db.collection(COLLECTION_NAME), embedding_response, 10)
-    print(similar)
 
     retrieved_context = "\n".join(doc.get("text_content","") for doc in similar)
     prompt = f"""
