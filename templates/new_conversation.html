@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Start a New Conversation</h2>
+    <form method="POST" action="{{ url_for('new_conversation') }}">
+        <div class="form-group">
+            <label for="username">Enter Username:</label>
+            <input type="text" id="username" name="username" placeholder="Username" required>
+        </div>
+        <button type="submit" class="btn">Start Chat</button>
+    </form>
+</div>
+{% endblock %}

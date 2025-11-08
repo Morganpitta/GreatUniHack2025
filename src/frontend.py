@@ -92,19 +92,21 @@ def conversations():
     
     return render_template('conversations.html', users=users, title='Conversations')
 
-@app.route('/new_conversation', methods=['POST'])
+@app.route('/new_conversation', methods=['GET', 'POST'])
 @login_required
 def new_conversation():
-    username = request.form.get('username')
-    user = User.query.filter_by(username=username).first()
-    if user:
-        if user.id == current_user.id:
-            flash('You cannot start a conversation with yourself.', 'danger')
+    if request.method == 'POST':
+        username = request.form.get('username')
+        user = User.query.filter_by(username=username).first()
+        if user:
+            if user.id == current_user.id:
+                flash('You cannot start a conversation with yourself.', 'danger')
+                return redirect(url_for('conversations'))
+            return redirect(url_for('chat', username=user.username))
+        else:
+            flash('User not found.', 'danger')
             return redirect(url_for('conversations'))
-        return redirect(url_for('chat', username=user.username))
-    else:
-        flash('User not found.', 'danger')
-        return redirect(url_for('conversations'))
+    return render_template('new_conversation.html', title='New Conversation')
 
 @app.route('/chat/<username>', methods=['GET', 'POST'])
 @login_required
@@ -130,5 +132,11 @@ def chat(username):
         )
     ).order_by(Message.timestamp.asc()).all()
 
+    # Logic to fetch users for the sidebar
+    sent_messages = db.session.query(Message.recipient_id).filter(Message.sender_id == current_user.id)
+    received_messages = db.session.query(Message.sender_id).filter(Message.recipient_id == current_user.id)
+    user_ids = set([item[0] for item in sent_messages.all()] + [item[0] for item in received_messages.all()])
+    users = User.query.filter(User.id.in_(user_ids)).all()
+
     return render_template('chat.html', title=f'Chat with {username}',
-                           form=form, partner=partner, messages=messages)
+                           form=form, partner=partner, messages=messages, users=users)
