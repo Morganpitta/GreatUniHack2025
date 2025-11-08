@@ -8,7 +8,10 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-cred = credentials.Certificate('')
+OUTPUT_DIM=2048
+COLLECTION_NAME='messages'
+
+cred = credentials.Certificate('/home/george/GreatUniHack/GreatUniHack2025/src/services/space-mouse-4803e-firebase-adminsdk-fbsvc-98226ecde3.json')
 
 firebase_admin.initialize_app(cred)
 client = genai.Client()
@@ -32,6 +35,20 @@ class Embedder:
         except:
             raise Exception("Error embedding content")
 
+class Firestore:
+    def __init__(self, credential):
+        self.credential = credential
+        firebase_admin.initialize_app(self.credential)
+        self.db = firestore.client()
+    
+    def save_to_collection(self, collection_name, embedding):
+        doc = {
+            "location": collection_name,
+            "embedding_field": Vector(embedding.embeddings[0].values), 
+        }
+        collection = self.db.collection(COLLECTION_NAME)
+        collection.add(doc)
+
 if __name__ == "__main__":
     texts = [
         "What is the meaning of life?",
@@ -42,14 +59,3 @@ if __name__ == "__main__":
 
     embed = Embedder("gemini-embedding-001")
     embedding = embed.embed_content(texts)
-
-    # 1. Get the firestore client
-    db = firestore.client()
-    collection = db.collection('messages')
-
-    # 2. Extract the first embedding vector from the response
-    doc = {
-        "location": "mars",
-        "embedding_field": Vector(embedding.embeddings[0].values),
-    }
-    collection.add(doc)
