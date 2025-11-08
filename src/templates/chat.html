@@ -108,7 +108,7 @@
                 {{ form.message(class="form-control", placeholder="Compose message...") }}
             </div>
             <button type="submit" class="btn-send" title="Transmit">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
             </button>
         </form>
     </div>
@@ -192,15 +192,12 @@ body {
     line-height: 1.6;
     background-color: #33334d;
     clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 90% 100%, 0% 100%);
-    
-    /* --- NEW: ADDED FOR DEPTH --- */
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 
         3px 3px 8px rgba(0, 0, 0, 0.4), /* Outer shadow for depth */
         inset 1px 1px 1px rgba(255, 255, 255, 0.05); /* Inner highlight for a bevel effect */
 }
 
-/* --- NEW: ADDED INTERACTIVE LIFT ON HOVER --- */
 .message:hover {
     transform: translateY(-3px);
     box-shadow: 
@@ -212,7 +209,8 @@ body {
 .message-wrapper.received { justify-content: flex-start; }
 
 .message.sent {
-    background-color: #533E85;
+    /* --- UPDATED: Changed to a deeper, richer purple gradient --- */
+    background: linear-gradient(145deg, #482f78, #6c4aa6);
     color: #fff;
     clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%, 0% 85%);
 }
@@ -288,5 +286,9 @@ body {
 }
 
 </style>
+<<<<<<< HEAD
 {% endblock %}```
 >>>>>>> 4fb408e (pretty good space theme)
+=======
+{% endblock %}
+>>>>>>> c9ae7cb (change colour of sent messages)
