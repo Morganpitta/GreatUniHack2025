@@ -2,13 +2,13 @@
 
 from google import genai
 from google.genai import types
-from google.cloud import firestore
 from google.cloud.firestore_v1.vector import Vector
+from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-OUTPUT_DIM=2048
+OUTPUT_DIM=768
 COLLECTION_NAME='messages'
 
 cred = credentials.Certificate('/home/george/GreatUniHack/GreatUniHack2025/src/services/space-mouse-4803e-firebase-adminsdk-fbsvc-98226ecde3.json')
@@ -26,12 +26,13 @@ class Embedder:
         self.model_name = model_name
         self.client = genai.Client()
 
-    def embed_content(self, contents, task_type):
+    def embed_content(self, contents, task_type) -> list[float]:
         try:
-            return(self.client.models.embed_content(
+            response = self.client.models.embed_content(
             model=self.model_name,
             contents=contents,
-            config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=2048)))
+            config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=OUTPUT_DIM))
+            return response.embeddings[0].values
         except:
             raise Exception("Error embedding content")
 
@@ -45,7 +46,7 @@ class Firestore:
     def save_to_collection(self, collection_name, embedding):
         doc = {
             "location": collection_name,
-            "embedding_field": Vector(embedding.embeddings[0].values), 
+            "embedding_field": Vector(embedding), 
         }
         collection = self.db.collection(COLLECTION_NAME)
         collection.add(doc)
@@ -56,7 +57,7 @@ class Firestore:
         return query
 
     def find_similar(self, query, query_vector, limit: int = 10):
-        nearest = query.find_nearest(vector_field="embedding_field", query_vector=query_vector, limit=limit, distance_measure="COSINE").get()
+        nearest = query.find_nearest(vector_field="embedding_field", query_vector=query_vector, limit=limit, distance_measure=DistanceMeasure.COSINE).get()
         return [doc.to_dict() for doc in nearest]
 
         nearest = collection.find_nearest
@@ -85,5 +86,19 @@ if __name__ == "__main__":
     similar = store.find_similar(db.collection(COLLECTION_NAME), embedding_response, 10)
     print(similar)
 
+    retrieved_context = "\n".join(doc.get("text_content","") for doc in similar)
+    prompt = f"""
+Answer the following question based only on the provided context.
 
+Context:
+{retrieved_context}
 
+Question:
+{user_query}
+"""
+    final_response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    )
+    print(final_response.text)
+    
