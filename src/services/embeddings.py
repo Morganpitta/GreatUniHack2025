@@ -26,12 +26,12 @@ class Embedder:
         self.model_name = model_name
         self.client = genai.Client()
 
-    def embed_content(self, contents):
+    def embed_content(self, contents, task_type):
         try:
             return(self.client.models.embed_content(
             model=self.model_name,
             contents=contents,
-            config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT", output_dimensionality=2048)))
+            config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=2048)))
         except:
             raise Exception("Error embedding content")
 
@@ -50,12 +50,16 @@ class Firestore:
         collection = self.db.collection(COLLECTION_NAME)
         collection.add(doc)
 
-    def retrieve_by_location(self, location):
+    def query_by_location(self, location):
         collection = self.db.collection(COLLECTION_NAME)
-        query = collection.where("location", "==", location).get()
-        return [query.to_dict() for query in query]
+        query = collection.where("location", "==", location)
+        return query
 
+    def find_similar(self, query, query_vector, limit: int = 10):
+        nearest = query.find_nearest(vector_field="embedding_field", query_vector=query_vector, limit=limit, distance_measure="COSINE").get()
+        return [doc.to_dict() for doc in nearest]
 
+        nearest = collection.find_nearest
 
 
 if __name__ == "__main__":
@@ -68,8 +72,18 @@ if __name__ == "__main__":
     # Calculate cosine similarity. Higher scores = greater semantic similarity.
 
     embed = Embedder("gemini-embedding-001")
-    embedding = embed.embed_content(texts)
+    embedding = embed.embed_content(texts, "RETRIEVAL_DOCUMENT")
     store = Firestore(cred)
     store.save_to_collection("mars", embedding)
-    print(store.retrieve_by_location("mars"))
+    print(store.query_by_location("mars"))
+
+    db = firestore.client()
+    user_query = "What is the surface of Mars like?" 
+
+    embedding_response = embed.embed_content(user_query, "RETRIEVAL_QUERY")
+    
+    similar = store.find_similar(db.collection(COLLECTION_NAME), embedding_response, 10)
+    print(similar)
+
+
 
