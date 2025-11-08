@@ -99,14 +99,23 @@ def login():
 
 @app.route('/logout')
 def logout():
+<<<<<<< HEAD
     session.pop("user", None)
     flash("Logged out!")
+=======
+    session.pop("user",None)
+    flash("Logged out!","success")
+>>>>>>> 4bea735 (updating stuff to fit new db)
     return redirect(url_for('login'))
 
 @app.route('/profile')
 def profile():
     if "user" in session:
+<<<<<<< HEAD
         return render_template('profile.html', title='Profile', user=session["user"])
+=======
+        return render_template('profile.html', title='Profile',user=session["user"],loggedin=True)
+>>>>>>> 4bea735 (updating stuff to fit new db)
     else:
         return redirect(url_for('login'))
 
