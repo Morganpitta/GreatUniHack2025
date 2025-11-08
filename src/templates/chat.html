@@ -1,8 +1,8 @@
-
 {% extends "base.html" %}
 
 {% block content %}
 <div class="chat-container">
+<<<<<<< HEAD
 <<<<<<< HEAD
     <div class="sidebar">
         <div class="new-conversation-button-container">
@@ -43,17 +43,26 @@
 =======
     <h2>Chat with {{ partner.username }}</h2>
     <div class="message-history">
+=======
+    <div class="chat-header">
+        <h2>Transmission to <span class="partner-name">{{ partner.username }}</span></h2>
+    </div>
+    <div class="message-history" id="message-history">
+>>>>>>> 4fb408e (pretty good space theme)
         {% for message in messages %}
-            <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
-                <p>{{ message.content }}</p>
-                <span class="timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+            <div class="message-wrapper {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
+                <div class="message">
+                    <p>{{ message.content }}</p>
+                    <span class="timestamp">{{ message.timestamp.strftime('%H:%M') }}</span>
+                </div>
             </div>
         {% endfor %}
     </div>
-    <div class="message-form">
-        <form method="POST" action="{{ url_for('chat', username=partner) }}">
+    <div class="message-form-container">
+        <form method="POST" action="{{ url_for('chat', username=partner) }}" class="message-form">
             {{ form.hidden_tag() }}
             <div class="form-group">
+<<<<<<< HEAD
                 {{ form.message(class="form-control", placeholder="Type a message...") }}
 >>>>>>> aba0f9d (integrated all the firebase code)
             </div>
@@ -95,3 +104,182 @@
   });
 </script>
 {% endblock %}
+=======
+                {{ form.message(class="form-control", placeholder="Compose message...") }}
+            </div>
+            <button type="submit" class="btn-send" title="Transmit">
+                <!-- A more stylized "send" icon, like a futuristic arrow -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // This simple script ensures the chat always shows the latest messages
+    // It's good practice to keep this for a better user experience.
+    const messageHistory = document.getElementById("message-history");
+    if (messageHistory) {
+        messageHistory.scrollTop = messageHistory.scrollHeight;
+    }
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+body {
+    background-color: #0d0c1d; /* Deep indigo space background */
+    font-family: 'Orbitron', sans-serif;
+    color: #d0d0d0;
+}
+
+.chat-container {
+    max-width: 800px;
+    margin: 30px auto;
+    border: 1px solid #533E85; /* Nebula purple border */
+    border-radius: 10px;
+    /* Subtle stardust texture for an artisan feel */
+    background: url('https://www.transparenttextures.com/patterns/stardust.png'), #1c1a33;
+    box-shadow: 0 0 30px rgba(83, 62, 133, 0.5); /* Soft, ethereal glow */
+    display: flex;
+    flex-direction: column;
+    height: 88vh; /* Taller for a more immersive feel */
+    overflow: hidden;
+}
+
+.chat-header {
+    padding: 15px 25px;
+    background: transparent;
+    border-bottom: 1px solid #533E85;
+    text-align: center;
+    text-shadow: 0 0 4px #FFD700; /* Subtle gold text shadow */
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-weight: 400;
+    font-size: 1.1em;
+    color: #e0e0e0;
+}
+
+.partner-name {
+    color: #FFD700; /* Artisan gold */
+    font-weight: 700;
+}
+
+.message-history {
+    flex-grow: 1;
+    padding: 25px;
+    overflow-y: auto;
+}
+
+/* Custom Scrollbar to match the artisan theme */
+.message-history::-webkit-scrollbar { width: 8px; }
+.message-history::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.message-history::-webkit-scrollbar-thumb {
+    background-color: #533E85;
+    border-radius: 4px;
+    border: 2px solid #1c1a33;
+}
+.message-history::-webkit-scrollbar-thumb:hover { background-color: #8A2BE2; }
+
+.message-wrapper {
+    display: flex;
+    margin-bottom: 20px;
+    animation: floatIn 0.5s ease-out forwards;
+}
+
+.message {
+    max-width: 70%;
+    padding: 12px 20px;
+    position: relative;
+    line-height: 1.6;
+    background-color: #33334d; /* Cosmic dust grey */
+    /* Custom shape for message bubbles */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 90% 100%, 0% 100%);
+}
+
+.message-wrapper.sent { justify-content: flex-end; }
+.message-wrapper.received { justify-content: flex-start; }
+
+.message.sent {
+    background-color: #533E85; /* Nebula purple for sent messages */
+    color: #fff;
+    /* Mirrored shape for sent messages */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%, 0% 85%);
+}
+
+.message p { margin: 0; font-size: 0.9em; }
+
+.timestamp {
+    font-size: 0.7em;
+    color: #FFD700;
+    display: block;
+    margin-top: 8px;
+    text-align: right;
+    opacity: 0.7;
+}
+.message.received .timestamp { text-align: left; }
+
+.message-form-container {
+    padding: 20px;
+    border-top: 1px solid #533E85;
+    background: rgba(13, 12, 29, 0.5); /* Transparent dark background */
+}
+
+.message-form { display: flex; align-items: center; }
+.form-group { flex-grow: 1; }
+
+.form-control {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid #533E85;
+    border-radius: 5px;
+    background: #1c1a33;
+    color: #e0e0e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+.form-control::placeholder { color: #777; }
+.form-control:focus {
+    outline: none;
+    border-color: #FFD700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+.btn-send {
+    background: transparent;
+    border: 2px solid #FFD700;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    margin-left: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    animation: pulseGlow 3s infinite alternate;
+}
+.btn-send:hover {
+    background: #FFD700;
+    transform: scale(1.1);
+}
+.btn-send svg { color: #FFD700; transition: color 0.3s ease; }
+.btn-send:hover svg { color: #1c1a33; }
+
+/* Artisan Animations */
+@keyframes floatIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+    from { box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
+    to { box-shadow: 0 0 18px rgba(255, 215, 0, 0.7); }
+}
+
+</style>
+{% endblock %}```
+>>>>>>> 4fb408e (pretty good space theme)
