@@ -1,4 +1,4 @@
-from init_db import app, login_manager, db
+from init_db import app, login_manager, db, embedder, firestore
 from database import User, Message
 
 from sqlalchemy import or_
@@ -121,6 +121,12 @@ def chat(username):
                       content=form.message.data)
         db.session.add(msg)
         db.session.commit()
+
+        # save message as a vector embedding
+        embedding = embedder.embed_content(form.message.data, "RETRIEVAL_DOCUMENT")
+        firestore.save_to_collection("mars", embedding)
+
+
         return redirect(url_for('chat', username=username))
 
     messages = Message.query.filter(
@@ -132,3 +138,4 @@ def chat(username):
 
     return render_template('chat.html', title=f'Chat with {username}',
                            form=form, partner=partner, messages=messages)
+

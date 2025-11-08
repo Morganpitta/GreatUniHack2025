@@ -5,13 +5,11 @@ from google.genai import types
 from google.cloud.firestore_v1.vector import Vector
 from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
 import firebase_admin
-from firebase_admin import credentials
 from firebase_admin import firestore
 
 OUTPUT_DIM=768
 COLLECTION_NAME='messages'
 
-cred = credentials.Certificate('/home/george/GreatUniHack/GreatUniHack2025/src/services/space-mouse-4803e-firebase-adminsdk-fbsvc-98226ecde3.json')
 
 firebase_admin.initialize_app(cred)
 client = genai.Client()
@@ -72,37 +70,37 @@ class Firestore:
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
 # TESTING
-    texts = ["Mars is a really beautiful planet", "Mars has lots of trees on it's surface"]
+#     texts = ["Mars is a really beautiful planet", "Mars has lots of trees on it's surface"]
 
-    embed = Embedder("gemini-embedding-001")
-    embedding = embed.embed_content(texts, "RETRIEVAL_DOCUMENT")
-    store = Firestore(cred)
-    store.save_to_collection("mars", embedding)
+#     embed = Embedder("gemini-embedding-001")
+#     embedding = embed.embed_content(texts, "RETRIEVAL_DOCUMENT")
+#     store = Firestore(cred)
+#     store.save_to_collection("mars", embedding)
 
-    db = firestore.client()
-    user_query = "What is the surface of Mars like?" 
+#     db = firestore.client()
+#     user_query = "What is the surface of Mars like?" 
 
-    embedding_response = embed.embed_content(user_query, "RETRIEVAL_QUERY")
+#     embedding_response = embed.embed_content(user_query, "RETRIEVAL_QUERY")
     
-    similar = store.query_by_location("mars", embedding_response)
+#     similar = store.query_by_location("mars", embedding_response)
 
-    retrieved_context = "\n".join(doc.get("text_content","") for doc in similar)
-    print(retrieved_context)
-    prompt = f"""
-Answer the following question based only on the provided context.
+#     retrieved_context = "\n".join(doc.get("text_content","") for doc in similar)
+#     print(retrieved_context)
+#     prompt = f"""
+# Answer the following question based only on the provided context.
 
-Context:
-{retrieved_context}
+# Context:
+# {retrieved_context}
 
-Question:
-{user_query}
-"""
-    final_response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=prompt,
-    )
-    print(final_response.text)
+# Question:
+# {user_query}
+# """
+#     final_response = client.models.generate_content(
+#     model="gemini-2.5-flash",
+#     contents=prompt,
+#     )
+#     print(final_response.text)
     
