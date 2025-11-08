@@ -6,14 +6,14 @@
     <h2>Chat with {{ partner.username }}</h2>
     <div class="message-history">
         {% for message in messages %}
-            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+            <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
                 <p>{{ message.content }}</p>
                 <span class="timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
         {% endfor %}
     </div>
     <div class="message-form">
-        <form method="POST" action="{{ url_for('chat', username=partner.username) }}">
+        <form method="POST" action="{{ url_for('chat', username=partner) }}">
             {{ form.hidden_tag() }}
             <div class="form-group">
                 {{ form.message(class="form-control", placeholder="Type a message...") }}
