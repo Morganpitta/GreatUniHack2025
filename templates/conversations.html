@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Conversations</h2>
+    
+    <div class="new-conversation">
+        <h3>Start a New Conversation</h3>
+        <form method="POST" action="{{ url_for('new_conversation') }}">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Enter username" required>
+            </div>
+            <button type="submit" class="btn">Start Chat</button>
+        </form>
+    </div>
+
+    <hr style="border-color: #00aaff; margin: 20px 0;">
+
+    <div class="conversation-list">
+        {% if users %}
+            <ul>
+                {% for user in users %}
+                    <li>
+                        <a href="{{ url_for('chat', username=user.username) }}">{{ user.username }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>You have no conversations yet. Start one above!</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.conversation-list ul {
+    list-style: none;
+    padding: 0;
+}
+.conversation-list li {
+    background: #2a2a3a;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+.conversation-list li a {
+    text-decoration: none;
+    color: #e0e0e0;
+    font-weight: bold;
+}
+.new-conversation {
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}

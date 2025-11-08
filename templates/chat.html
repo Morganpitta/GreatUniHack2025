@@ -1,0 +1,73 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="chat-container">
+    <h2>Chat with {{ partner.username }}</h2>
+    <div class="message-history">
+        {% for message in messages %}
+            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                <p>{{ message.content }}</p>
+                <span class="timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="message-form">
+        <form method="POST" action="{{ url_for('chat', username=partner.username) }}">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.message(class="form-control", placeholder="Type a message...") }}
+            </div>
+            <button type="submit" class="btn">Send</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.chat-container {
+    max-width: 800px;
+    margin: auto;
+    background: #1a1a2a;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.5);
+}
+.message-history {
+    height: 400px;
+    overflow-y: auto;
+    border-bottom: 1px solid #00aaff;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+}
+.message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    max-width: 70%;
+}
+.message.sent {
+    background: #005f8a;
+    margin-left: auto;
+    text-align: right;
+}
+.message.received {
+    background: #3a3a4a;
+}
+.message p {
+    margin: 0;
+}
+.timestamp {
+    font-size: 0.8em;
+    color: #aaa;
+    display: block;
+    margin-top: 5px;
+}
+.message-form {
+    display: flex;
+}
+.message-form .form-group {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+</style>
+{% endblock %}
