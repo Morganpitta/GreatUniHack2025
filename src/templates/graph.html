@@ -35,19 +35,51 @@
             }
 
             // --- 3. CONFIGURATION ---
-            const pointRadius = 25; // Increased radius a bit for better texture visibility
+            const pointRadius = 25;
             const solidLineThreshold = 350;
             const dottedLineThreshold = 500;
             const minimumNodeDistance = 150;
             const maxPlacementAttempts = 100;
-
-            // ***** NEW CONFIGURATION VARIABLE for PLANET TEXTURE *****
-            // Edit this to change the density of the surface texture.
             const numberOfTextureDots = 50;
 
+            // ***** NEW CONFIGURATION for STARRY BACKGROUND *****
+            // You can easily edit these variables.
+            const numberOfStars = 300;
+            const starColors = ['#FFFFFF', '#FFFFE0', '#ADD8E6', '#FFFAF0']; // White, Light Yellow, Light Blue, Floral White
+
             let points = [];
+            let stars = []; // ***** NEW ARRAY to store star data *****
+
 
             // --- 4. FUNCTIONS ---
+            
+            // ***** NEW FUNCTION: generateStars() *****
+            // Creates a static set of stars to be drawn on the background.
+            // This runs only once when the page loads.
+            function generateStars() {
+                for (let i = 0; i < numberOfStars; i++) {
+                    stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        radius: Math.random() * 1.5, // Makes stars of varying sizes
+                        // Pick a random color from our starColors array
+                        color: starColors[Math.floor(Math.random() * starColors.length)]
+                    });
+                }
+            }
+
+            // ***** NEW FUNCTION: drawStars() *****
+            // Draws the pre-generated stars onto the canvas.
+            function drawStars() {
+                ctx.save(); // Save the current context state to not affect other drawings
+                stars.forEach(star => {
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = star.color;
+                    ctx.fill();
+                });
+                ctx.restore(); // Restore the context state
+            }
 
             function getDistance(point1, point2) { /* ... function unchanged ... */ 
                 const dx = point1.x - point2.x;
@@ -104,64 +136,60 @@
                 }
             }
             
-            // ***** MODIFIED FUNCTION: drawPoints() *****
-            // This function now draws the nodes as textured planets.
-            function drawPoints() {
+            function drawPoints() { /* ... function unchanged ... */ 
                 points.forEach(point => {
-                    // --- Step 1: Create the 3D shading with a radial gradient ---
-                    // This creates a "hotspot" effect, making the circle look like a sphere.
                     const gradient = ctx.createRadialGradient(
-                        point.x - pointRadius * 0.3, point.y - pointRadius * 0.3, pointRadius * 0.1, // Inner circle (light source)
-                        point.x, point.y, pointRadius // Outer circle (planet edge)
+                        point.x - pointRadius * 0.3, point.y - pointRadius * 0.3, pointRadius * 0.1,
+                        point.x, point.y, pointRadius
                     );
-                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)'); // Highlight color
-                    gradient.addColorStop(0.8, point.color); // Main planet color
-                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)'); // Shaded edge
-
-                    // Draw the main planet circle with the gradient
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+                    gradient.addColorStop(0.8, point.color);
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
                     ctx.beginPath();
                     ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
                     ctx.fillStyle = gradient;
                     ctx.fill();
-
-                    // --- Step 2: Add procedural surface texture ---
-                    // This draws small, semi-transparent dots to simulate clouds or land.
                     for (let i = 0; i < numberOfTextureDots; i++) {
-                        // Get a random position *inside* the circle
                         const angle = Math.random() * Math.PI * 2;
                         const radius = Math.random() * pointRadius;
                         const x = point.x + Math.cos(angle) * radius;
                         const y = point.y + Math.sin(angle) * radius;
-
-                        // Draw a small dot
                         ctx.beginPath();
                         ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
-                        // Use a slightly transparent white for a cloudy effect
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
                         ctx.fill();
                     }
-
-                    // --- Step 3: Draw the label as before ---
                     ctx.fillStyle = '#fff';
                     ctx.font = '16px Arial';
                     ctx.textAlign = 'center';
-                    ctx.shadowColor = 'black'; // Add a shadow for better readability
+                    ctx.shadowColor = 'black';
                     ctx.shadowBlur = 5;
                     ctx.fillText(point.name, point.x, point.y - pointRadius - 12);
-                    ctx.shadowBlur = 0; // Reset shadow
+                    ctx.shadowBlur = 0;
                 });
             }
 
             // --- 5. MAIN DRAW FUNCTION ---
+            // ***** MODIFIED FUNCTION: render() *****
             function render() {
+                // Step 1: Clear the entire canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Step 2: Draw the background stars first
+                drawStars();
+                
+                // Step 3: Recalculate planet positions
                 generatePointPositions();
+                
+                // Step 4: Draw the connections and planets on top of the stars
                 drawConnections();
                 drawPoints();
             }
             
             // --- 6. INITIALIZATION ---
-            render();
+            // ***** MODIFIED INITIALIZATION *****
+            generateStars(); // Generate the starfield ONCE on page load
+            render(); // Call the main render function to draw everything
             canvas.addEventListener('click', render);
         });
     </script>
