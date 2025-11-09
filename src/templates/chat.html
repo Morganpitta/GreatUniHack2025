@@ -1,3 +1,4 @@
+<!-- The ENTIRE chat.html file with the updated script -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -6,7 +7,6 @@
         <h2>Transmission to <span class="partner-name">{{ partner }}</span></h2>
     </div>
     <div class="message-history" id="message-history">
-        {# Messages loaded from the server on initial page load #}
         {% for message in messages %}
             <div class="message-wrapper {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
                 <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
@@ -17,10 +17,12 @@
         {% endfor %}
     </div>
     <div class="message-form-container">
-        <form method="POST" action="{{ url_for('chat', username=partner) }}" class="message-form">
+        <!-- The id="message-form" is new -->
+        <form method="POST" action="" class="message-form" id="message-form">
             {{ form.hidden_tag() }}
             <div class="form-group">
-                {{ form.message(class="form-control", placeholder="Compose message...") }}
+                <!-- The id="message-input" is new -->
+                {{ form.message(class="form-control", placeholder="Compose message...", id="message-input") }}
             </div>
             <button type="submit" class="btn-send" title="Transmit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
@@ -29,10 +31,10 @@
     </div>
 </div>
 
-{# ---- WEBSOCKET SCRIPT SECTION ---- #}
+
+<!-- ############ UPDATED SCRIPT ############ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script type="text/javascript">
-    // Function to scroll the message history to the bottom
     function scrollToBottom() {
         const messageHistory = document.getElementById("message-history");
         if (messageHistory) {
@@ -40,64 +42,71 @@
         }
     }
 
-    // Scroll to bottom on initial page load
     scrollToBottom();
 
     document.addEventListener('DOMContentLoaded', (event) => {
-        // Establish WebSocket connection
         var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        // Get variables from Flask template
         const conversationId = "{{ conversation_id }}";
         const currentUser = "{{ session['user'] }}";
 
-        // Join the chat room on connection
+        // ---- NEW: Intercept form submission ----
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+
+        messageForm.addEventListener('submit', function(e) {
+            // The magic line! This stops the page from refreshing.
+            e.preventDefault();
+
+            const messageText = messageInput.value.trim();
+
+            if (messageText) {
+                // Send the message over the websocket instead of a POST request
+                socket.emit('send_message', {
+                    'message': messageText,
+                    'conversation_id': conversationId
+                });
+
+                // Clear the input field and refocus for the next message
+                messageInput.value = '';
+                messageInput.focus();
+            }
+        });
+
+
         socket.on('connect', function() {
             socket.emit('join', {room: conversationId});
         });
 
-        // Listen for new messages from the server
         socket.on('new_message', function(msg) {
             const messageHistory = document.getElementById('message-history');
-
-            // Determine if the message was sent or received
             const messageType = msg.sender_id === currentUser ? 'sent' : 'received';
 
-            // Create the main wrapper div
             const messageWrapper = document.createElement('div');
             messageWrapper.classList.add('message-wrapper', messageType);
 
-            // Create the message content div
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', messageType);
 
-            // Create the paragraph for the message text
             const messageParagraph = document.createElement('p');
             messageParagraph.textContent = msg.content;
 
-            // Create the span for the timestamp
             const timestampSpan = document.createElement('span');
             timestampSpan.classList.add('timestamp');
 
-            // Format the timestamp to HH:MM
             const messageTimestamp = new Date(msg.timestamp);
             const hours = messageTimestamp.getHours().toString().padStart(2, '0');
             const minutes = messageTimestamp.getMinutes().toString().padStart(2, '0');
             timestampSpan.textContent = `${hours}:${minutes}`;
 
-            // Assemble the message element
             messageDiv.appendChild(messageParagraph);
             messageDiv.appendChild(timestampSpan);
             messageWrapper.appendChild(messageDiv);
 
-            // Add the complete new message to the chat history
             messageHistory.appendChild(messageWrapper);
-
-            // Scroll to the new message
             scrollToBottom();
         });
 
-        // Leave the room when the user closes the page
         window.onbeforeunload = function() {
             socket.emit('leave', {room: conversationId});
         };
@@ -105,10 +114,10 @@
 </script>
 
 
-{# ---- ORIGINAL CSS SECTION (UNCHANGED) ---- #}
+<!-- Your original CSS remains unchanged -->
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-
+/* ... all of your existing styles go here ... */
 body {
     background-color: #0d0c1d;
     font-family: 'Orbitron', sans-serif;
@@ -177,14 +186,14 @@ body {
     background-color: #33334d;
     clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 90% 100%, 0% 100%);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 
+    box-shadow:
         3px 3px 8px rgba(0, 0, 0, 0.4),
         inset 1px 1px 1px rgba(255, 255, 255, 0.05);
 }
 
 .message:hover {
     transform: translateY(-3px);
-    box-shadow: 
+    box-shadow:
         5px 5px 12px rgba(0, 0, 0, 0.5),
         inset 1px 1px 1px rgba(255, 255, 255, 0.05);
 }
@@ -267,6 +276,6 @@ body {
     from { box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
     to { box-shadow: 0 0 18px rgba(255, 215, 0, 0.7); }
 }
-
 </style>
+
 {% endblock %}

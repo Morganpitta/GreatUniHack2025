@@ -148,8 +148,12 @@ def new_conversation():
 
     return redirect(url_for('chat', username=username))
 
-@app.route('/chat/<username>', methods=['GET', 'POST'])
+
+
+@app.route('/chat/<username>', methods=['GET']) # REMOVED 'POST' from methods
 def chat(username):
+    # This route is now ONLY for loading the chat page initially.
+    # The form submission logic is removed from here.
     partner = username
     current_user = session["user"]
 
@@ -166,16 +170,7 @@ def chat(username):
         return redirect(url_for('new_conversation', username=partner))
     conversation_id = conversation[0]["id"]
 
-    form = MessageForm()
-    if form.validate_on_submit():
-        chats_ref = fbdb.reference("chats/" + conversation_id)
-        # Using ISO format for better cross-platform compatibility
-        new_message = {"content": form.message.data, "sender_id": current_user, "timestamp": datetime.datetime.now().isoformat()}
-        chats_ref.push(new_message)
-
-        socketio.emit('new_message', new_message, room=conversation_id)
-
-        return redirect(url_for('chat', username=username))
+    form = MessageForm() # The form is still needed for the template
 
     chat_list = []
     full_list = get_as_list("chats/" + conversation_id)
@@ -183,10 +178,8 @@ def chat(username):
         for i in full_list:
             if "timestamp" in i:
                 try:
-                    # Prefer ISO format parsing
                     i["timestamp"] = datetime.datetime.fromisoformat(i["timestamp"])
                 except (ValueError, TypeError):
-                    # Fallback for old timestamp format
                     i["timestamp"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
             else:
                 i["timestamp"] = datetime.datetime.now()
@@ -196,6 +189,7 @@ def chat(username):
 
     return render_template('chat.html', title=f'Chat with {username}',
                            form=form, partner=partner, messages=messages, loggedin=True, conversation_id=conversation_id)
+
 
 # Re-added the /graph route
 @app.route('/graph')
@@ -209,6 +203,31 @@ def graph():
     ]
 
     return render_template('graph.html', chart_data=json.dumps(data))
+
+@socketio.on('send_message')
+def handle_send_message_event(data):
+    """
+    Handles a client sending a message. Saves it to Firebase and broadcasts it.
+    """
+    app.logger.info(f"Received message: {data}")
+
+    conversation_id = data['conversation_id']
+    message_content = data['message']
+    sender = session['user']
+
+    # Create the new message object
+    new_message = {
+        "content": message_content, 
+        "sender_id": sender, 
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
+    # Save to Firebase
+    chats_ref = fbdb.reference("chats/" + conversation_id)
+    chats_ref.push(new_message)
+
+    # Broadcast the message to all clients in the room (including the sender)
+    socketio.emit('new_message', new_message, room=conversation_id)
 
 # Socket.IO event handlers
 @socketio.on('join')
