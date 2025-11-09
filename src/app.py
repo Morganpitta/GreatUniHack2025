@@ -221,6 +221,14 @@ def graph():
 
     return render_template('graph.html', chart_data=json.dumps(data))
 
+@app.route('/hover/<name>',methods=["POST","GET"])
+def handle_hover_planet_event(name):
+    location=name
+    response = gemini.generate_response(firestore.generate_prompt(gemini, location))
+    print(response)
+    return render_template('tourism_popup.html', location=location, response=response)
+
+
 @socketio.on('send_message')
 def handle_send_message_event(data):
     """
@@ -245,8 +253,8 @@ def handle_send_message_event(data):
 
     # Convert to vector embedding and save to Firestore
     location = fbdb.reference("users/" + sender).get().get("location") 
-    embedding = gemini.embed_content(form.message.data, "RETRIEVAL_DOCUMENT")
-    firestore.save_to_collection(location, embedding, form.message.data)
+    embedding = gemini.embed_content(message_content, "RETRIEVAL_DOCUMENT")
+    firestore.save_to_collection(location, embedding, message_content)
 
     # Broadcast the message to all clients in the room (including the sender)
     socketio.emit('new_message', new_message, room=conversation_id)

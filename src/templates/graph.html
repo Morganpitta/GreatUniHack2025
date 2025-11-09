@@ -6,13 +6,13 @@
     <title>Data Visualization</title>
     <style>
         body { background-color: #111; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; }
-        canvas { background-color: #000; border: 1px solid #444; cursor: pointer; }
+        canvas { background-color: #000; border: 1px solid #444; }
         p { margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <canvas id="visualizationCanvas" width="800" height="600"></canvas>
+    <button onclick="callinfo()"><canvas id="visualizationCanvas" width="800" height="600"></canvas></button>
     <p>Click on the canvas to regenerate the layout.</p>
 
     <script>
@@ -232,16 +232,68 @@
                 drawConnections();
                 drawPoints();
                 drawMoons();
+                drawHoverEffect();
+
+                if (hoveredPlanet) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+
                 requestAnimationFrame(animate);
             }
+
+            function drawHoverEffect() {
+                if (hoveredPlanet) {
+                    // Glow effect
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(hoveredPlanet.x, hoveredPlanet.y, pointRadius + 10, 0, Math.PI * 2);
+                    const gradient = ctx.createRadialGradient(hoveredPlanet.x, hoveredPlanet.y, pointRadius, hoveredPlanet.x, hoveredPlanet.y, pointRadius + 10);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    ctx.restore();
+                    //hoveredPlanet.name has the name
+                }
+            }
+
+            window.callinfo = function() {
+                if (hoveredPlanet) {
+                    var name = hoveredPlanet.name;
+                    console.log(name);
+                    //fetch("/hover",{method:"POST",headers: { "Content-Type": "application/json" },body:JSON.stringify({name:name})})
+                    window.location.href = `/hover/${encodeURIComponent(name)}`;
+                } else {
+                    console.log("No planet hovered.");
+                }
+            };
             
             // --- 6. INITIALIZATION ---
+            let hoveredPlanet = null;
             generateStars();
             generateComet();
             generatePointPositions();
             animate();
 
-            canvas.addEventListener('click', generatePointPositions);
+            function handleMouseMove(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                hoveredPlanet = null;
+                for (const point of points) {
+                    const distance = getDistance({x: mouseX, y: mouseY}, point);
+                    if (distance < pointRadius) {
+                        hoveredPlanet = point;
+                        break;
+                    }
+                }
+            }
+
+            //canvas.addEventListener('click', generatePointPositions);
+            canvas.addEventListener('mousemove', handleMouseMove);
         });
     </script>
 </body>
