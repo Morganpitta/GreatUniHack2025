@@ -6,7 +6,7 @@
     <title>Data Visualization</title>
     <style>
         body { background-color: #111; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; }
-        canvas { background-color: #000; border: 1px solid #444; cursor: pointer; }
+        canvas { background-color: #000; border: 1px solid #444; }
         p { margin-top: 20px; }
     </style>
 </head>
@@ -232,16 +232,58 @@
                 drawConnections();
                 drawPoints();
                 drawMoons();
+                drawHoverEffect();
+
+                if (hoveredPlanet) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+
                 requestAnimationFrame(animate);
+            }
+
+            function drawHoverEffect() {
+                if (hoveredPlanet) {
+                    // Glow effect
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(hoveredPlanet.x, hoveredPlanet.y, pointRadius + 10, 0, Math.PI * 2);
+                    const gradient = ctx.createRadialGradient(hoveredPlanet.x, hoveredPlanet.y, pointRadius, hoveredPlanet.x, hoveredPlanet.y, pointRadius + 10);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+                    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    ctx.restore();
+
+                    ctx.restore();
+                }
             }
             
             // --- 6. INITIALIZATION ---
+            let hoveredPlanet = null;
             generateStars();
             generateComet();
             generatePointPositions();
             animate();
 
+            function handleMouseMove(e) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                hoveredPlanet = null;
+                for (const point of points) {
+                    const distance = getDistance({x: mouseX, y: mouseY}, point);
+                    if (distance < pointRadius) {
+                        hoveredPlanet = point;
+                        break;
+                    }
+                }
+            }
+
             canvas.addEventListener('click', generatePointPositions);
+            canvas.addEventListener('mousemove', handleMouseMove);
         });
     </script>
 </body>
