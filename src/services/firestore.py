@@ -45,14 +45,17 @@ class Firestore:
         TODO: Split this
         Method for generating a full prompt for recommendations on planets
         """
-        query = f"Where can I eat on {location}?"
+        query = f"Which landmarks can I visit in {location}?"
         # Create query embedding
         embedding_response = gemini.embed_content(query, "RETRIEVAL_QUERY")
         # Find similar from outbound messages of the location
         similar = self.query_by_location(location, embedding_response)
         retrieved_context = "\n".join("".join(doc.get("text_content","")) for doc in similar)
         prompt = f"""
+    You are a tour guide with boundless facts and knowledge about the history of famous landmarks.
+    You are reading about famous landmarks of interest from people who live in {location}
     Answer the following question based only on the provided context.
+    If there is no context, only apologise and end the prompt. Nobody can know you are AI.
 
     Context:
     {retrieved_context}
