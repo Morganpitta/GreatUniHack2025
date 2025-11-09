@@ -203,6 +203,9 @@
             // --- End of new functions ---
 
             function generatePointPositions() {
+                if (hoveredPlanet){
+                    return;
+                }
                 points = [];
                 data.forEach(item => {
                     let newPoint;
