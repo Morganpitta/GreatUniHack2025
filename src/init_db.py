@@ -8,7 +8,7 @@ from services import embeddings
 from firebase_admin import credentials
 
 # App initialization
-cred = credentials.Certificate('/home/george/GreatUniHack/GreatUniHack2025/src/services/space-mouse-4803e-firebase-adminsdk-fbsvc-98226ecde3.json')
+cred = credentials.Certificate('services/cert.json')
 template_dir = os.path.abspath('../templates')
 static_dir = os.path.abspath('../static')
 print(template_dir)
