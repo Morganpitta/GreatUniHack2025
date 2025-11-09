@@ -2,6 +2,7 @@
 
 {% block content %}
 <<<<<<< HEAD
+<<<<<<< HEAD
 <div class="chat-container">
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -45,28 +46,41 @@
     <h2>Chat with {{ partner.username }}</h2>
     <div class="message-history">
 =======
+=======
+<div class="chat-container">
+>>>>>>> 1440b93 (websocket css fix)
     <div class="chat-header">
         <h2>Transmission to <span class="partner-name">{{ partner }}</span></h2>
     </div>
     <div class="message-history" id="message-history">
+<<<<<<< HEAD
 >>>>>>> 4fb408e (pretty good space theme)
 =======
 <div class="container">
     <h2>Chat with {{ partner }}</h2>
     <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
 >>>>>>> 0eab52e (websockets stuff)
+=======
+        {# Messages loaded from the server on initial page load #}
+>>>>>>> 1440b93 (websocket css fix)
         {% for message in messages %}
-            <div class="message">
-                <strong>{{ message.sender_id }}:</strong> {{ message.content }}
-                <span class="timestamp" style="font-size: 0.8em; color: #888;">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            <div class="message-wrapper {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
+                <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
+                    <p>{{ message.content }}</p>
+                    <span class="timestamp">{{ message.timestamp.strftime('%H:%M') }}</span>
+                </div>
             </div>
         {% endfor %}
     </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1440b93 (websocket css fix)
     <div class="message-form-container">
         <form method="POST" action="{{ url_for('chat', username=partner) }}" class="message-form">
             {{ form.hidden_tag() }}
             <div class="form-group">
+<<<<<<< HEAD
 <<<<<<< HEAD
                 {{ form.message(class="form-control", placeholder="Type a message...") }}
 >>>>>>> aba0f9d (integrated all the firebase code)
@@ -110,6 +124,8 @@
 </script>
 {% endblock %}
 =======
+=======
+>>>>>>> 1440b93 (websocket css fix)
                 {{ form.message(class="form-control", placeholder="Compose message...") }}
             </div>
             <button type="submit" class="btn-send" title="Transmit">
@@ -117,6 +133,7 @@
             </button>
         </form>
     </div>
+<<<<<<< HEAD
 =======
     <form method="POST" action="">
         {{ form.hidden_tag() }}
@@ -129,49 +146,92 @@
         </div>
     </form>
 >>>>>>> 0eab52e (websockets stuff)
+=======
+>>>>>>> 1440b93 (websocket css fix)
 </div>
 
+{# ---- WEBSOCKET SCRIPT SECTION ---- #}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script type="text/javascript">
+    // Function to scroll the message history to the bottom
+    function scrollToBottom() {
+        const messageHistory = document.getElementById("message-history");
+        if (messageHistory) {
+            messageHistory.scrollTop = messageHistory.scrollHeight;
+        }
+    }
+
+    // Scroll to bottom on initial page load
+    scrollToBottom();
+
     document.addEventListener('DOMContentLoaded', (event) => {
+        // Establish WebSocket connection
         var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        var conversationId = "{{ conversation_id }}";
+        // Get variables from Flask template
+        const conversationId = "{{ conversation_id }}";
+        const currentUser = "{{ session['user'] }}";
 
+        // Join the chat room on connection
         socket.on('connect', function() {
             socket.emit('join', {room: conversationId});
         });
 
+        // Listen for new messages from the server
         socket.on('new_message', function(msg) {
-            const messagesDiv = document.getElementById('messages');
+            const messageHistory = document.getElementById('message-history');
+
+            // Determine if the message was sent or received
+            const messageType = msg.sender_id === currentUser ? 'sent' : 'received';
+
+            // Create the main wrapper div
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('message-wrapper', messageType);
+
+            // Create the message content div
             const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
+            messageDiv.classList.add('message', messageType);
 
-            const senderStrong = document.createElement('strong');
-            senderStrong.textContent = msg.sender_id + ': ';
-            messageDiv.appendChild(senderStrong);
+            // Create the paragraph for the message text
+            const messageParagraph = document.createElement('p');
+            messageParagraph.textContent = msg.content;
 
-            messageDiv.append(msg.content);
-
+            // Create the span for the timestamp
             const timestampSpan = document.createElement('span');
             timestampSpan.classList.add('timestamp');
-            timestampSpan.style.fontSize = '0.8em';
-            timestampSpan.style.color = '#888';
-            let messageTimestamp = new Date(msg.timestamp);
-            timestampSpan.textContent = ' ' + messageTimestamp.toLocaleString();
+
+            // Format the timestamp to HH:MM
+            const messageTimestamp = new Date(msg.timestamp);
+            const hours = messageTimestamp.getHours().toString().padStart(2, '0');
+            const minutes = messageTimestamp.getMinutes().toString().padStart(2, '0');
+            timestampSpan.textContent = `${hours}:${minutes}`;
+
+            // Assemble the message element
+            messageDiv.appendChild(messageParagraph);
             messageDiv.appendChild(timestampSpan);
-            
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            messageWrapper.appendChild(messageDiv);
+
+            // Add the complete new message to the chat history
+            messageHistory.appendChild(messageWrapper);
+
+            // Scroll to the new message
+            scrollToBottom();
         });
 
+        // Leave the room when the user closes the page
         window.onbeforeunload = function() {
             socket.emit('leave', {room: conversationId});
         };
     });
 </script>
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+
+
+{# ---- ORIGINAL CSS SECTION (UNCHANGED) ---- #}
+>>>>>>> 1440b93 (websocket css fix)
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
@@ -183,10 +243,15 @@ body {
 
 .chat-container {
     max-width: 900px;
+<<<<<<< HEAD
     /* --- UPDATED: Reduced margin and increased height --- */
     margin: 20px auto;
     height: 94vh;
     
+=======
+    margin: 20px auto;
+    height: 94vh;
+>>>>>>> 1440b93 (websocket css fix)
     border: 1px solid #533E85;
     border-radius: 10px;
     background: url('https://www.transparenttextures.com/patterns/stardust.png'), #1c1a33;
@@ -338,6 +403,7 @@ body {
 
 </style>
 <<<<<<< HEAD
+<<<<<<< HEAD
 {% endblock %}```
 >>>>>>> 4fb408e (pretty good space theme)
 =======
@@ -346,3 +412,6 @@ body {
 =======
 {% endblock %}
 >>>>>>> 0eab52e (websockets stuff)
+=======
+{% endblock %}
+>>>>>>> 1440b93 (websocket css fix)
