@@ -21,6 +21,7 @@ import dotenv
 import os
 import uuid
 import datetime
+import json
 
 dotenv.load_dotenv()
 CRED=os.environ.get("CRED")
@@ -186,6 +187,18 @@ def chat(username):
 
     return render_template('chat.html', title=f'Chat with {username}',
                            form=form, partner=partner, messages=messages,loggedin=True)
+
+@app.route('/graph')
+def graph():
+    # Data to be visualized. You can replace this with data from a database, API, etc.
+    data = [
+        {"name": "UK", "color": "#D2691E"},
+        {"name": "Germany", "color": "#FF69B4"},
+        {"name": "Brazil", "color": "#1E90FF"},
+        {"name": "Peru", "color": "#32CD32"}
+    ]
+
+    return render_template('graph.html', data=json.dumps(data))
 
 
 def get_as_list(path):
