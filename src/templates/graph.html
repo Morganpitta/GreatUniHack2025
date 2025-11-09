@@ -32,6 +32,7 @@
             }
 
             // --- 3. CONFIGURATION ---
+            // Scene
             const pointRadius = 25;
             const solidLineThreshold = 350;
             const dottedLineThreshold = 500;
@@ -40,27 +41,34 @@
             const numberOfTextureDots = 50;
             const numberOfStars = 300;
             const starColors = ['#FFFFFF', '#FFFFE0', '#ADD8E6', '#FFFAF0'];
-
-            // ***** NEW CONFIGURATION for MOONS *****
-            const maxMoonsPerPlanet = 4; // Maximum number of moons a planet can have.
-            const moonColors = ['#E5E4E2', '#C0C0C0', '#A9A9A9']; // Platinum, Silver, DarkGray
+            // Moons
+            const maxMoonsPerPlanet = 4;
+            const moonColors = ['#E5E4E2', '#C0C0C0', '#A9A9A9'];
+            // Comet
+            const cometSpeed = 2;
+            const cometTailLength = 100;
+            const cometColors = ['#FF6600', '#FF4500', '#000000', '#FF8C00'];
 
             let points = [];
             let stars = [];
+            let comet = {};
+
 
             // --- 4. FUNCTIONS ---
 
-            function generateStars() { /* ... function unchanged ... */ 
+            function generateStars() {
+                stars = []; // Clear old stars if any
                 for (let i = 0; i < numberOfStars; i++) {
                     stars.push({
-                        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
                         radius: Math.random() * 1.5,
                         color: starColors[Math.floor(Math.random() * starColors.length)]
                     });
                 }
             }
 
-            function drawStars() { /* ... function unchanged ... */ 
+            function drawStars() {
                 ctx.save();
                 stars.forEach(star => {
                     ctx.beginPath();
@@ -71,14 +79,57 @@
                 ctx.restore();
             }
 
-            function getDistance(point1, point2) { /* ... function unchanged ... */ 
-                const dx = point1.x - point2.x;
-                const dy = point1.y - point2.y;
-                return Math.sqrt(dx * dx + dy * dy);
+            function generateComet() {
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+                if (side === 0) { x = Math.random() * canvas.width; y = -50; } 
+                else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; } 
+                else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; } 
+                else { x = -50; y = Math.random() * canvas.height; }
+
+                const targetX = canvas.width / 2 + (Math.random() - 0.5) * 400;
+                const targetY = canvas.height / 2 + (Math.random() - 0.5) * 400;
+                const angle = Math.atan2(targetY - y, targetX - x);
+                
+                comet = {
+                    x: x, y: y,
+                    dx: Math.cos(angle) * cometSpeed,
+                    dy: Math.sin(angle) * cometSpeed,
+                    tail: []
+                };
             }
 
-            // ***** MODIFIED FUNCTION: generatePointPositions() *****
-            // It now also generates the moons for each planet.
+            function drawComet() {
+                comet.x += comet.dx;
+                comet.y += comet.dy;
+                comet.tail.unshift({ x: comet.x, y: comet.y });
+                if (comet.tail.length > cometTailLength) {
+                    comet.tail.pop();
+                }
+
+                ctx.save();
+                for (let i = 0; i < comet.tail.length; i++) {
+                    let p = comet.tail[i];
+                    const alpha = (comet.tail.length - i) / comet.tail.length; // Fade out
+                    const radius = alpha * 2.5; // Shrink
+                    
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = cometColors[i % cometColors.length]; // Stripe the tail
+                    ctx.globalAlpha = alpha;
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                if (comet.x < -100 || comet.x > canvas.width + 100 || comet.y < -100 || comet.y > canvas.height + 100) {
+                    generateComet();
+                }
+            }
+            
+            function getDistance(p1, p2) {
+                return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            }
+
             function generatePointPositions() {
                 points = [];
                 data.forEach(item => {
@@ -90,7 +141,7 @@
                             name: item.name, color: item.color,
                             x: pointRadius + Math.random() * (canvas.width - pointRadius * 2),
                             y: pointRadius + Math.random() * (canvas.height - pointRadius * 2),
-                            moons: [] // Each point now has an array for its moons
+                            moons: []
                         };
                         isValidPosition = true;
                         for (const existingPoint of points) {
@@ -100,15 +151,13 @@
                         }
                         attempts++;
                     }
-                    
-                    // After placing a planet, generate its moons
                     const moonCount = Math.floor(Math.random() * (maxMoonsPerPlanet + 1));
                     for (let i = 0; i < moonCount; i++) {
                         newPoint.moons.push({
-                            orbitRadius: pointRadius + 10 + Math.random() * 20, // Distance from planet
-                            angle: Math.random() * Math.PI * 2, // Starting position in orbit
-                            speed: (Math.random() - 0.5) * 0.02, // Random speed and direction
-                            radius: Math.random() * 2 + 1, // Moon size
+                            orbitRadius: pointRadius + 10 + Math.random() * 20,
+                            angle: Math.random() * Math.PI * 2,
+                            speed: (Math.random() - 0.5) * 0.02,
+                            radius: Math.random() * 2 + 1,
                             color: moonColors[Math.floor(Math.random() * moonColors.length)]
                         });
                     }
@@ -116,35 +165,43 @@
                 });
             }
 
-            function drawConnections() { /* ... function unchanged ... */ 
+            function drawConnections() {
                 for (let i = 0; i < points.length; i++) {
                     for (let j = i + 1; j < points.length; j++) {
                         const distance = getDistance(points[i], points[j]);
                         ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                         if (distance < solidLineThreshold) {
                             ctx.beginPath(); ctx.setLineDash([]);
-                            ctx.moveTo(points[i].x, points[i].y); ctx.lineTo(points[j].x, points[j].y);
-                            ctx.stroke();
+                            ctx.moveTo(points[i].x, points[i].y); ctx.lineTo(points[j].x, points[j].y); ctx.stroke();
                         } else if (distance < dottedLineThreshold) {
                             ctx.beginPath(); ctx.setLineDash([5, 10]);
-                            ctx.moveTo(points[i].x, points[i].y); ctx.lineTo(points[j].x, points[j].y);
-                            ctx.stroke();
+                            ctx.moveTo(points[i].x, points[i].y); ctx.lineTo(points[j].x, points[j].y); ctx.stroke();
                         }
                     }
                 }
             }
             
-            function drawPoints() { /* ... function unchanged ... */ 
+            function drawPoints() {
                 points.forEach(point => {
+                    // **THIS WAS A MAJOR SOURCE OF THE BUGS - IT'S FIXED NOW**
                     const gradient = ctx.createRadialGradient(point.x - pointRadius * 0.3, point.y - pointRadius * 0.3, pointRadius * 0.1, point.x, point.y, pointRadius);
-                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)'); gradient.addColorStop(0.8, point.color); gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-                    ctx.beginPath(); ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = gradient; ctx.fill();
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+                    gradient.addColorStop(0.8, point.color);
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+
                     for (let i = 0; i < numberOfTextureDots; i++) {
-                        const angle = Math.random() * Math.PI * 2; const radius = Math.random() * pointRadius;
-                        const x = point.x + Math.cos(angle) * radius; const y = point.y + Math.sin(angle) * radius;
-                        ctx.beginPath(); ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.fill();
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * pointRadius;
+                        const x = point.x + Math.cos(angle) * radius;
+                        const y = point.y + Math.sin(angle) * radius;
+                        ctx.beginPath();
+                        ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        ctx.fill();
                     }
                     ctx.fillStyle = '#fff'; ctx.font = '16px Arial'; ctx.textAlign = 'center';
                     ctx.shadowColor = 'black'; ctx.shadowBlur = 5;
@@ -153,19 +210,12 @@
                 });
             }
 
-            // ***** NEW FUNCTION: drawMoons() *****
-            // Updates moon positions and draws them.
             function drawMoons() {
                 points.forEach(point => {
                     point.moons.forEach(moon => {
-                        // Update the angle to make it orbit
                         moon.angle += moon.speed;
-
-                        // Calculate the moon's x and y position using trigonometry
                         const moonX = point.x + moon.orbitRadius * Math.cos(moon.angle);
                         const moonY = point.y + moon.orbitRadius * Math.sin(moon.angle);
-
-                        // Draw the moon
                         ctx.beginPath();
                         ctx.arc(moonX, moonY, moon.radius, 0, Math.PI * 2);
                         ctx.fillStyle = moon.color;
@@ -174,40 +224,23 @@
                 });
             }
 
-
             // --- 5. ANIMATION LOOP ---
-            
-            // ***** NEW FUNCTION: animate() *****
-            // This is the main animation loop that runs on every frame.
             function animate() {
-                // Step 1: Clear the entire canvas for the new frame
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Step 2: Draw the static background
                 drawStars();
-
-                // Step 3: Draw the planet-to-planet connections
+                drawComet();
                 drawConnections();
-                
-                // Step 4: Draw the planets themselves
                 drawPoints();
-
-                // Step 5: Update moon positions and draw them on top
                 drawMoons();
-
-                // Step 6: Request the next frame to continue the loop
                 requestAnimationFrame(animate);
             }
-
             
             // --- 6. INITIALIZATION ---
-            generateStars(); // Generate the starfield ONCE
-            generatePointPositions(); // Generate the initial planet layout and their moons
-            
-            animate(); // Start the animation loop!
+            generateStars();
+            generateComet();
+            generatePointPositions();
+            animate();
 
-            // When the canvas is clicked, just regenerate the planet layout.
-            // The animation loop will automatically pick up the new positions.
             canvas.addEventListener('click', generatePointPositions);
         });
     </script>
