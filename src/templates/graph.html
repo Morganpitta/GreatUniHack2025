@@ -5,12 +5,147 @@
         /* This style block can be inside or outside the block content, but here is fine. */
         canvas { background-color: #000; border: 1px solid #444; }
         p { margin-top: 20px; text-align: center; }
+
+        /* --- GLOBAL CHAT STYLES --- */
+        #global-chat-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 400px;
+            background: rgba(28, 26, 51, 0.9); /* From chat.html */
+            border: 1px solid #533E85;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(83, 62, 133, 0.5);
+            display: flex;
+            flex-direction: column;
+            font-family: 'Arial', sans-serif; /* Use a more standard font */
+            z-index: 100;
+        }
+
+        #global-chat-header {
+            padding: 10px;
+            background: transparent;
+            border-bottom: 1px solid #533E85;
+            text-align: center;
+        }
+        
+        #global-chat-header h3 {
+            margin: 0;
+            font-weight: 400;
+            font-size: 1.1em;
+            color: #e0e0e0;
+            text-shadow: 0 0 4px #FFD700;
+        }
+
+        #global-message-history {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            color: #d0d0d0;
+        }
+        
+        /* Scrollbar styles from chat.html */
+        #global-message-history::-webkit-scrollbar { width: 6px; }
+        #global-message-history::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        #global-message-history::-webkit-scrollbar-thumb {
+            background-color: #533E85;
+            border-radius: 3px;
+        }
+
+        #global-message-form-container {
+            padding: 10px;
+            border-top: 1px solid #533E85;
+        }
+
+        #global-message-form {
+            display: flex;
+        }
+
+        #global-message-input {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid #533E85;
+            border-radius: 5px;
+            background: #0d0c1d;
+            color: #e0e0e0;
+            font-size: 0.9em;
+        }
+        #global-message-input:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+        
+        #global-send-btn {
+            background: transparent;
+            border: 1px solid #FFD700;
+            border-radius: 5px;
+            width: 40px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #global-send-btn:hover { background: #FFD700; }
+        #global-send-btn svg { color: #FFD700; margin-top: 3px; }
+        #global-send-btn:hover svg { color: #1c1a33; }
+        
+        /* Message bubble styles (simplified from chat.html) */
+        .global-message-wrapper {
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        .global-message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 3px;
+        }
+        .global-message-sender {
+            font-size: 0.8em; 
+            color: #FFD700; 
+            font-weight: 700;
+        }
+        .global-message-timestamp {
+            font-size: 0.7em;
+            color: #aaa;
+            font-weight: normal;
+        }
+        .global-message-content {
+            background-color: #33334d;
+            padding: 6px 10px;
+            border-radius: 5px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        /* Style for user's own messages */
+        .global-message-wrapper.sent .global-message-sender {
+            color: #9AEADD;
+        }
+        .global-message-wrapper.sent .global-message-content {
+            background: #482f78; /* Sent color from chat.html */
+        }
     </style>
     
     <canvas id="visualizationCanvas" width="800" height="600"></canvas>
     <p>Hover over a planet to learn more. Click the background to regenerate the layout.</p>
 
-    <!-- Include the Socket.IO client library -->
+    <div id="global-chat-container">
+        <div id="global-chat-header">
+            <h3>Global Transmission</h3>
+        </div>
+        <div id="global-message-history">
+            </div>
+        <div id="global-message-form-container">
+            <form id="global-message-form">
+                <input type="text" id="global-message-input" placeholder="Type a global message..." autocomplete="off">
+                <button type="submit" id="global-send-btn" title="Transmit">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 
     <script>
@@ -31,6 +166,110 @@
                 // Tell the server this client is leaving the graph page
                 socket.emit('leave_graph');
             };
+
+            // --- GLOBAL CHAT LOGIC ---
+            const globalChatHistory = document.getElementById('global-message-history');
+            const globalMessageForm = document.getElementById('global-message-form');
+            const globalMessageInput = document.getElementById('global-message-input');
+            
+            // Get the current user's name from the session (passed by Jinja)
+            const currentUser = {% if session['user'] %}'{{ session['user']|safe }}'{% else %}null{% endif %};
+
+            // --- NEW: Load initial messages ---
+            let initialGlobalMessages = [];
+            try {
+                initialGlobalMessages = JSON.parse('{{ global_messages_json|safe }}');
+            } catch (e) {
+                console.error("Failed to parse initial global messages:", e);
+            }
+
+            function globalScrollToBottom() {
+                if (globalChatHistory) {
+                    globalChatHistory.scrollTop = globalChatHistory.scrollHeight;
+                }
+            }
+            
+            // --- NEW: Refactored function to add a message bubble ---
+            function appendGlobalMessage(msg) {
+                if (!globalChatHistory) return;
+                
+                const messageType = msg.sender_id === currentUser ? 'sent' : 'received';
+
+                const messageWrapper = document.createElement('div');
+                messageWrapper.classList.add('global-message-wrapper', messageType);
+
+                // Create header (sender name + timestamp)
+                const messageHeader = document.createElement('div');
+                messageHeader.classList.add('global-message-header');
+                
+                const senderSpan = document.createElement('span');
+                senderSpan.classList.add('global-message-sender');
+                senderSpan.textContent = msg.sender_id === currentUser ? 'You' : msg.sender_id;
+                
+                const timestampSpan = document.createElement('span');
+                timestampSpan.classList.add('global-message-timestamp');
+                
+                // Format timestamp
+                try {
+                    const messageTimestamp = new Date(msg.timestamp);
+                    const hours = messageTimestamp.getHours().toString().padStart(2, '0');
+                    const minutes = messageTimestamp.getMinutes().toString().padStart(2, '0');
+                    timestampSpan.textContent = `${hours}:${minutes}`;
+                } catch (e) {
+                    timestampSpan.textContent = '??:??'; // Fallback
+                }
+
+                messageHeader.appendChild(senderSpan);
+                messageHeader.appendChild(timestampSpan);
+                
+                // Create content (message body)
+                const messageContent = document.createElement('div');
+                messageContent.classList.add('global-message-content');
+                messageContent.textContent = msg.content;
+
+                messageWrapper.appendChild(messageHeader);
+                messageWrapper.appendChild(messageContent);
+                globalChatHistory.appendChild(messageWrapper);
+            }
+
+            // Listen for new global messages from the server
+            socket.on('new_global_message', function(msg) {
+                appendGlobalMessage(msg); // Use the refactored function
+                globalScrollToBottom(); // Scroll on new message
+            });
+
+            // Handle sending a global message
+            if (globalMessageForm) {
+                globalMessageForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const messageText = globalMessageInput.value.trim();
+                    
+                    if (messageText && currentUser) {
+                        socket.emit('send_global_message', {
+                            'message': messageText
+                        });
+                        globalMessageInput.value = ''; // Clear input
+                    } else if (!currentUser) {
+                        // This will trigger if the user isn't logged in
+                        globalMessageInput.value = ''; 
+                        globalMessageInput.placeholder = 'You must be logged in to chat.';
+                    }
+                });
+            }
+
+            // --- NEW: Function to load history ---
+            function loadInitialGlobalMessages() {
+                if (initialGlobalMessages && initialGlobalMessages.length > 0) {
+                    initialGlobalMessages.forEach(msg => {
+                        appendGlobalMessage(msg); // Use the refactored function
+                    });
+                    globalScrollToBottom(); // Scroll to bottom after loading
+                }
+            }
+            
+            loadInitialGlobalMessages(); // Load history on page load
+            // --- END GLOBAL CHAT LOGIC ---
+
 
             // --- 2. DATA LOADING ---
             let data;

@@ -279,16 +279,45 @@ def graph():
         } for key in location_dict
     ]
 
-    print(data)
+    # --- NEW: Load Global Chat History ---
+    global_chat_list = []
+    full_list = get_as_list("global") # Use the helper
+    if full_list:
+        for i in full_list:
+            if "timestamp" in i:
+                try:
+                    # Try parsing ISO format first
+                    i["timestamp_dt"] = datetime.datetime.fromisoformat(i["timestamp"])
+                except (ValueError, TypeError):
+                    try:
+                        # Fallback for old float timestamps if any
+                        i["timestamp_dt"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
+                    except (ValueError, TypeError):
+                        # Final fallback
+                        i["timestamp_dt"] = datetime.datetime.now()
+            else:
+                i["timestamp_dt"] = datetime.datetime.now()
+            
+            # Ensure the timestamp string exists for JSON
+            if "timestamp" not in i:
+                 i["timestamp"] = i["timestamp_dt"].isoformat()
+                 
+            global_chat_list.append(i)
 
-    # data = [
-        # {"name": "india", "color": "#D2691E"},
-        # {"name": "Germany", "color": "#FF69B4"},
-        # {"name": "Brazil", "color": "#1E90FF"},
-        # {"name": "Peru", "color": "#32CD32"}
-    # ]
+    # Sort by the datetime object
+    messages_sorted = sorted(global_chat_list, key=lambda x: x.get('timestamp_dt'))
+    
+    # Create a final list for JSON, removing the non-serializable datetime object
+    final_messages_list = []
+    for msg in messages_sorted:
+        msg.pop('timestamp_dt', None) # Remove the helper key
+        final_messages_list.append(msg)
+    # --- END NEW ---
 
-    return render_template('graph.html', chart_data=json.dumps(data), loggedin=("user" in session))
+    return render_template('graph.html', 
+                           chart_data=json.dumps(data), 
+                           global_messages_json=json.dumps(final_messages_list), # Pass the sorted messages
+                           loggedin=("user" in session))
 
 @app.route('/hover/<name>', methods=["GET"])
 def handle_hover_planet_event(name):
@@ -351,6 +380,29 @@ def on_join_graph():
 def on_leave_graph():
     """Removes the client from the graph viewers room."""
     leave_room('graph_viewers')
+
+
+# --- NEW: HANDLER FOR GLOBAL CHAT ---
+@socketio.on('send_global_message')
+def handle_send_global_message(data):
+    """
+    Handles a client sending a global message to the graph chat.
+    Saves to Firebase and broadcasts.
+    """
+    if 'user' in session:
+        app.logger.info(f"Received global message: {data} from {session['user']}")
+        
+        new_message = {
+            "content": data['message'],
+            "sender_id": session['user'],
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
+        # --- NEW: Save to Firebase ---
+        fbdb.reference("global").push(new_message)
+        
+        # Broadcast the global message to all clients in the graph room
+        socketio.emit('new_global_message', new_message, room='graph_viewers')
 
 
 @socketio.on('send_message')
