@@ -10,11 +10,12 @@
 <body>
     <nav class="nav">
         <div class="container">
-            <a href="{{ url_for('index') }}" class="logo">Galaxy-Chat</a>
+            <a href="{{ url_for('index') }}" class="logo"><img src="{{ url_for('static', filename='images/spacemouse.png') }}" alt="Logo"></a>
             <div class="nav-links">
                 {% if loggedin %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                     <a href="{{ url_for('conversations') }}">Messages</a>
+                    <a href="{{ url_for('graph') }}">Graph</a>
                     <a href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
                     <a href="{{ url_for('login') }}">Login</a>

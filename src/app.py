@@ -5,6 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError
 from flask_socketio import SocketIO, join_room, leave_room, emit
+from services import gemini, firestore
 
 # App initialization
 app = Flask(__name__)
@@ -37,11 +38,15 @@ firebase_admin.initialize_app(cred, {
 
 ref = fbdb.reference('/')
 
+gemini = gemini.Gemini("gemini-embedding-001")
+firestore = firestore.Firestore()
+
 # Forms
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=20)])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    location = StringField('Location', validators=[DataRequired()])
     submit = SubmitField('Sign Up')
 
     def validate_username(self, username):
@@ -64,8 +69,12 @@ class MessageForm(FlaskForm):
 @app.route('/')
 def index():
     if "user" in session:
-        return redirect(url_for('conversations'))
+        return redirect(url_for('home'))
     return redirect(url_for('login'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html', title='Home',loggedin=True)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -75,7 +84,7 @@ def register():
     if form.validate_on_submit():
         # Using the direct hashing method from your updated code
         hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256')
-        user = {"username": form.username.data, "password": hashed_password}
+        user = {"username": form.username.data, "password": hashed_password,"location":form.location.data}
         fbdb.reference("users/" + form.username.data).set(user)
         
         flash('Congratulations, you are now a registered user!', 'success')
@@ -106,7 +115,10 @@ def logout():
 @app.route('/profile')
 def profile():
     if "user" in session:
-        return render_template('profile.html', title='Profile', user=session["user"])
+        location = fbdb.reference("users/" + session["user"]).get().get("location")
+        if location is None:
+            location = "No location given"
+        return render_template('profile.html', title='Profile', user=session["user"],location=location,loggedin=True)
     else:
         return redirect(url_for('login'))
 

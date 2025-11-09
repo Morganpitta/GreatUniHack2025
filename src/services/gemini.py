@@ -2,6 +2,10 @@
 
 from google import genai
 from google.genai import types
+import dotenv
+import os
+dotenv.load_dotenv()
+os.environ.get("GEMINI_API_KEY")
 
 OUTPUT_DIM=768
 
