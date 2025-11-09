@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash,session
+from flask import Flask, render_template, request, redirect, url_for, flash,session, jsonify
 # from flask_login import LoginManager , current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
@@ -25,6 +25,7 @@ import uuid
 import datetime
 import json
 import models # Re-added this import
+import random
 
 dotenv.load_dotenv()
 CRED=os.environ.get("CRED")
@@ -212,8 +213,24 @@ def chat(username):
 @app.route('/graph')
 def graph():
     # Data to be visualized. You can replace this with data from a database, API, etc.
+    location_dict = {}
+
+    for i in get_as_list("users"):
+        loc = i["location"]
+        if loc in location_dict:
+            location_dict[loc] += 1
+        else:
+            location_dict[loc] = 1
+    
+
+    # colours = ["#D2691E", "#FF69B4", "#1E90FF", "#32CD32"]
+
+    # data = [
+    #     {"name": key, "size": location_dict[key], "colour":random.choice(colours)} for key in location_dict
+    # ]
+
     data = [
-        {"name": "UK", "color": "#D2691E"},
+        {"name": "india", "color": "#D2691E"},
         {"name": "Germany", "color": "#FF69B4"},
         {"name": "Brazil", "color": "#1E90FF"},
         {"name": "Peru", "color": "#32CD32"}
@@ -221,12 +238,11 @@ def graph():
 
     return render_template('graph.html', chart_data=json.dumps(data))
 
-@app.route('/hover/<name>',methods=["POST","GET"])
+@app.route('/hover/<name>', methods=["GET"])
 def handle_hover_planet_event(name):
-    location=name
+    location = name
     response = gemini.generate_response(firestore.generate_prompt(gemini, location))
-    print(response)
-    return render_template('tourism_popup.html', location=location, response=response)
+    return jsonify({'response': response})
 
 
 @socketio.on('send_message')

@@ -1,19 +1,21 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Visualization</title>
+</head> -->
+<!-- <body> -->
+{% extends "base.html" %}
+
+{% block content %}
     <style>
-        body { background-color: #111; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; }
+        /* body { background-color: #111; color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; } */
         canvas { background-color: #000; border: 1px solid #444; }
         p { margin-top: 20px; }
     </style>
-</head>
-<body>
-
-    <button onclick="callinfo()"><canvas id="visualizationCanvas" width="800" height="600"></canvas></button>
-    <p>Click on the canvas to regenerate the layout.</p>
+    <canvas id="visualizationCanvas" width="800" height="600"></canvas>
+    <p>Hover over a planet to learn more.</p>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -23,7 +25,7 @@
 
             // --- 2. DATA LOADING ---
             let data;
-            try { data = JSON.parse('{{ chart_data|safe }}'); } 
+            try { data = JSON.parse('{{ chart_data|safe }}'); }
             catch (e) {
                 console.error("Failed to parse data from Flask:", e);
                 ctx.fillStyle = 'red'; ctx.font = '20px Arial'; ctx.textAlign = 'center';
@@ -32,7 +34,6 @@
             }
 
             // --- 3. CONFIGURATION ---
-            // Scene
             const pointRadius = 25;
             const solidLineThreshold = 350;
             const dottedLineThreshold = 500;
@@ -41,10 +42,8 @@
             const numberOfTextureDots = 50;
             const numberOfStars = 300;
             const starColors = ['#FFFFFF', '#FFFFE0', '#ADD8E6', '#FFFAF0'];
-            // Moons
             const maxMoonsPerPlanet = 4;
             const moonColors = ['#E5E4E2', '#C0C0C0', '#A9A9A9'];
-            // Comet
             const cometSpeed = 2;
             const cometTailLength = 100;
             const cometColors = ['#FF6600', '#FF4500', '#000000', '#FF8C00'];
@@ -53,11 +52,10 @@
             let stars = [];
             let comet = {};
 
-
             // --- 4. FUNCTIONS ---
 
             function generateStars() {
-                stars = []; // Clear old stars if any
+                stars = [];
                 for (let i = 0; i < numberOfStars; i++) {
                     stars.push({
                         x: Math.random() * canvas.width,
@@ -82,15 +80,15 @@
             function generateComet() {
                 const side = Math.floor(Math.random() * 4);
                 let x, y;
-                if (side === 0) { x = Math.random() * canvas.width; y = -50; } 
-                else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; } 
-                else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; } 
+                if (side === 0) { x = Math.random() * canvas.width; y = -50; }
+                else if (side === 1) { x = canvas.width + 50; y = Math.random() * canvas.height; }
+                else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 50; }
                 else { x = -50; y = Math.random() * canvas.height; }
 
                 const targetX = canvas.width / 2 + (Math.random() - 0.5) * 400;
                 const targetY = canvas.height / 2 + (Math.random() - 0.5) * 400;
                 const angle = Math.atan2(targetY - y, targetX - x);
-                
+
                 comet = {
                     x: x, y: y,
                     dx: Math.cos(angle) * cometSpeed,
@@ -110,12 +108,12 @@
                 ctx.save();
                 for (let i = 0; i < comet.tail.length; i++) {
                     let p = comet.tail[i];
-                    const alpha = (comet.tail.length - i) / comet.tail.length; // Fade out
-                    const radius = alpha * 2.5; // Shrink
-                    
+                    const alpha = (comet.tail.length - i) / comet.tail.length;
+                    const radius = alpha * 2.5;
+
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = cometColors[i % cometColors.length]; // Stripe the tail
+                    ctx.fillStyle = cometColors[i % cometColors.length];
                     ctx.globalAlpha = alpha;
                     ctx.fill();
                 }
@@ -125,7 +123,7 @@
                     generateComet();
                 }
             }
-            
+
             function getDistance(p1, p2) {
                 return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
             }
@@ -180,10 +178,9 @@
                     }
                 }
             }
-            
+
             function drawPoints() {
                 points.forEach(point => {
-                    // **THIS WAS A MAJOR SOURCE OF THE BUGS - IT'S FIXED NOW**
                     const gradient = ctx.createRadialGradient(point.x - pointRadius * 0.3, point.y - pointRadius * 0.3, pointRadius * 0.1, point.x, point.y, pointRadius);
                     gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
                     gradient.addColorStop(0.8, point.color);
@@ -224,28 +221,8 @@
                 });
             }
 
-            // --- 5. ANIMATION LOOP ---
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawStars();
-                drawComet();
-                drawConnections();
-                drawPoints();
-                drawMoons();
-                drawHoverEffect();
-
-                if (hoveredPlanet) {
-                    canvas.style.cursor = 'pointer';
-                } else {
-                    canvas.style.cursor = 'default';
-                }
-
-                requestAnimationFrame(animate);
-            }
-
             function drawHoverEffect() {
                 if (hoveredPlanet) {
-                    // Glow effect
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(hoveredPlanet.x, hoveredPlanet.y, pointRadius + 10, 0, Math.PI * 2);
@@ -255,23 +232,115 @@
                     ctx.fillStyle = gradient;
                     ctx.fill();
                     ctx.restore();
-                    //hoveredPlanet.name has the name
+                }
+            }
+            
+            function drawInfoBox() {
+                if (hoveredPlanet && hoveredPlanet.description) {
+                    const text = hoveredPlanet.description;
+                    const maxWidth = 200;
+                    const lineHeight = 20;
+                    const padding = 10;
+                    const cornerRadius = 5;
+
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'top';
+
+                    const words = text.split(' ');
+                    let line = '';
+                    let lines = [];
+                    for (let n = 0; n < words.length; n++) {
+                        let testLine = line + words[n] + ' ';
+                        let metrics = ctx.measureText(testLine);
+                        if (metrics.width > maxWidth && n > 0) {
+                            lines.push(line);
+                            line = words[n] + ' ';
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    lines.push(line);
+
+                    const boxHeight = lines.length * lineHeight + (padding * 2);
+                    const boxWidth = maxWidth + (padding * 2);
+                    
+                    let finalBoxX = hoveredPlanet.x + pointRadius + 15;
+                    let finalBoxY = hoveredPlanet.y - boxHeight / 2;
+                    if (finalBoxX + boxWidth > canvas.width) {
+                        finalBoxX = hoveredPlanet.x - pointRadius - 15 - boxWidth;
+                    }
+                    if (finalBoxY < 0) { finalBoxY = padding; }
+                    if (finalBoxY + boxHeight > canvas.height) { finalBoxY = canvas.height - boxHeight - padding; }
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(finalBoxX + cornerRadius, finalBoxY);
+                    ctx.lineTo(finalBoxX + boxWidth - cornerRadius, finalBoxY);
+                    ctx.quadraticCurveTo(finalBoxX + boxWidth, finalBoxY, finalBoxX + boxWidth, finalBoxY + cornerRadius);
+                    ctx.lineTo(finalBoxX + boxWidth, finalBoxY + boxHeight - cornerRadius);
+                    ctx.quadraticCurveTo(finalBoxX + boxWidth, finalBoxY + boxHeight, finalBoxX + boxWidth - cornerRadius, finalBoxY + boxHeight);
+                    ctx.lineTo(finalBoxX + cornerRadius, finalBoxY + boxHeight);
+                    ctx.quadraticCurveTo(finalBoxX, finalBoxY + boxHeight, finalBoxX, finalBoxY + boxHeight - cornerRadius);
+                    ctx.lineTo(finalBoxX, finalBoxY + cornerRadius);
+                    ctx.quadraticCurveTo(finalBoxX, finalBoxY, finalBoxX + cornerRadius, finalBoxY);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#FFFFFF';
+                    for (let i = 0; i < lines.length; i++) {
+                        ctx.fillText(lines[i], finalBoxX + padding, finalBoxY + padding + (i * lineHeight));
+                    }
+
+                } else if (hoveredPlanet && hoveredPlanet.isLoading) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("Loading...", hoveredPlanet.x, hoveredPlanet.y + pointRadius + 20);
                 }
             }
 
-            window.callinfo = function() {
-                if (hoveredPlanet) {
-                    var name = hoveredPlanet.name;
-                    console.log(name);
-                    //fetch("/hover",{method:"POST",headers: { "Content-Type": "application/json" },body:JSON.stringify({name:name})})
-                    window.location.href = `/hover/${encodeURIComponent(name)}`;
-                } else {
-                    console.log("No planet hovered.");
+            // --- 5. ANIMATION LOOP ---
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawStars();
+                drawComet();
+                drawConnections();
+                drawPoints();
+                drawMoons();
+                drawHoverEffect();
+                drawInfoBox();
+
+                canvas.style.cursor = hoveredPlanet ? 'pointer' : 'default';
+
+                requestAnimationFrame(animate);
+            }
+
+            function fetchPlanetInfo(planet) {
+                if (planet.isLoading || planet.description) {
+                    return;
                 }
-            };
-            
-            // --- 6. INITIALIZATION ---
+                planet.isLoading = true;
+                fetch(`/hover/${encodeURIComponent(planet.name)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        planet.description = data.response;
+                        planet.isLoading = false;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching planet info:', error);
+                        planet.description = "Could not load information.";
+                        planet.isLoading = false;
+                    });
+            }
+
+            // --- 6. INITIALIZATION & EVENT LISTENERS ---
             let hoveredPlanet = null;
+            let lastHoveredPlanet = null;
+
             generateStars();
             generateComet();
             generatePointPositions();
@@ -290,11 +359,18 @@
                         break;
                     }
                 }
+
+                if (hoveredPlanet && hoveredPlanet !== lastHoveredPlanet) {
+                    fetchPlanetInfo(hoveredPlanet);
+                }
+                lastHoveredPlanet = hoveredPlanet;
             }
 
-            //canvas.addEventListener('click', generatePointPositions);
+            canvas.addEventListener('click', generatePointPositions); // Keep click to regenerate layout
             canvas.addEventListener('mousemove', handleMouseMove);
         });
     </script>
-</body>
-</html>
+
+{% endblock %}
+<!-- </body> -->
+<!-- </html> -->
