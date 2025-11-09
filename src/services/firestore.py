@@ -54,8 +54,8 @@ class Firestore:
         prompt = f"""    
     Answer the following question based only on the provided context.
     You must list all of the famous foods as a list
-    Briefly describe each food in accordance with the context.
-    If there is no context, only apologise and end the prompt. Nobody can know you are AI.
+    Briefly describe each food in your own words.
+    If there is no context, only apologise and end the prompt. Do not mention the word "context"
 
     Context:
     {retrieved_context}
