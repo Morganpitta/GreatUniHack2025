@@ -1,65 +1,272 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>Chat with {{ partner }}</h2>
-    <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Transmission to <span class="partner-name">{{ partner }}</span></h2>
+    </div>
+    <div class="message-history" id="message-history">
+        {# Messages loaded from the server on initial page load #}
         {% for message in messages %}
-            <div class="message">
-                <strong>{{ message.sender_id }}:</strong> {{ message.content }}
-                <span class="timestamp" style="font-size: 0.8em; color: #888;">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+            <div class="message-wrapper {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
+                <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
+                    <p>{{ message.content }}</p>
+                    <span class="timestamp">{{ message.timestamp.strftime('%H:%M') }}</span>
+                </div>
             </div>
         {% endfor %}
     </div>
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        <div class="form-group">
-            {{ form.message.label(class="form-control-label") }}
-            {{ form.message(class="form-control") }}
-        </div>
-        <div class="form-group">
-            {{ form.submit(class="btn btn-primary") }}
-        </div>
-    </form>
+    <div class="message-form-container">
+        <form method="POST" action="{{ url_for('chat', username=partner) }}" class="message-form">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.message(class="form-control", placeholder="Compose message...") }}
+            </div>
+            <button type="submit" class="btn-send" title="Transmit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13L2 9L22 2Z" /><path d="M22 2L15 22L11 13" /></svg>
+            </button>
+        </form>
+    </div>
 </div>
 
+{# ---- WEBSOCKET SCRIPT SECTION ---- #}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script type="text/javascript">
+    // Function to scroll the message history to the bottom
+    function scrollToBottom() {
+        const messageHistory = document.getElementById("message-history");
+        if (messageHistory) {
+            messageHistory.scrollTop = messageHistory.scrollHeight;
+        }
+    }
+
+    // Scroll to bottom on initial page load
+    scrollToBottom();
+
     document.addEventListener('DOMContentLoaded', (event) => {
+        // Establish WebSocket connection
         var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        var conversationId = "{{ conversation_id }}";
+        // Get variables from Flask template
+        const conversationId = "{{ conversation_id }}";
+        const currentUser = "{{ session['user'] }}";
 
+        // Join the chat room on connection
         socket.on('connect', function() {
             socket.emit('join', {room: conversationId});
         });
 
+        // Listen for new messages from the server
         socket.on('new_message', function(msg) {
-            const messagesDiv = document.getElementById('messages');
+            const messageHistory = document.getElementById('message-history');
+
+            // Determine if the message was sent or received
+            const messageType = msg.sender_id === currentUser ? 'sent' : 'received';
+
+            // Create the main wrapper div
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('message-wrapper', messageType);
+
+            // Create the message content div
             const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
+            messageDiv.classList.add('message', messageType);
 
-            const senderStrong = document.createElement('strong');
-            senderStrong.textContent = msg.sender_id + ': ';
-            messageDiv.appendChild(senderStrong);
+            // Create the paragraph for the message text
+            const messageParagraph = document.createElement('p');
+            messageParagraph.textContent = msg.content;
 
-            messageDiv.append(msg.content);
-
+            // Create the span for the timestamp
             const timestampSpan = document.createElement('span');
             timestampSpan.classList.add('timestamp');
-            timestampSpan.style.fontSize = '0.8em';
-            timestampSpan.style.color = '#888';
-            let messageTimestamp = new Date(msg.timestamp);
-            timestampSpan.textContent = ' ' + messageTimestamp.toLocaleString();
+
+            // Format the timestamp to HH:MM
+            const messageTimestamp = new Date(msg.timestamp);
+            const hours = messageTimestamp.getHours().toString().padStart(2, '0');
+            const minutes = messageTimestamp.getMinutes().toString().padStart(2, '0');
+            timestampSpan.textContent = `${hours}:${minutes}`;
+
+            // Assemble the message element
+            messageDiv.appendChild(messageParagraph);
             messageDiv.appendChild(timestampSpan);
-            
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            messageWrapper.appendChild(messageDiv);
+
+            // Add the complete new message to the chat history
+            messageHistory.appendChild(messageWrapper);
+
+            // Scroll to the new message
+            scrollToBottom();
         });
 
+        // Leave the room when the user closes the page
         window.onbeforeunload = function() {
             socket.emit('leave', {room: conversationId});
         };
     });
 </script>
+
+
+{# ---- ORIGINAL CSS SECTION (UNCHANGED) ---- #}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+body {
+    background-color: #0d0c1d;
+    font-family: 'Orbitron', sans-serif;
+    color: #d0d0d0;
+}
+
+.chat-container {
+    max-width: 900px;
+    margin: 20px auto;
+    height: 94vh;
+    border: 1px solid #533E85;
+    border-radius: 10px;
+    background: url('https://www.transparenttextures.com/patterns/stardust.png'), #1c1a33;
+    box-shadow: 0 0 30px rgba(83, 62, 133, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-header {
+    padding: 15px 25px;
+    background: transparent;
+    border-bottom: 1px solid #533E85;
+    text-align: center;
+    text-shadow: 0 0 4px #FFD700;
+}
+
+.chat-header h2 {
+    margin: 0;
+    font-weight: 400;
+    font-size: 1.1em;
+    color: #e0e0e0;
+}
+
+.partner-name {
+    color: #FFD700;
+    font-weight: 700;
+}
+
+.message-history {
+    flex-grow: 1;
+    padding: 25px;
+    overflow-y: auto;
+}
+
+.message-history::-webkit-scrollbar { width: 8px; }
+.message-history::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.message-history::-webkit-scrollbar-thumb {
+    background-color: #533E85;
+    border-radius: 4px;
+    border: 2px solid #1c1a33;
+}
+.message-history::-webkit-scrollbar-thumb:hover { background-color: #8A2BE2; }
+
+.message-wrapper {
+    display: flex;
+    margin-bottom: 20px;
+    animation: floatIn 0.5s ease-out forwards;
+}
+
+.message {
+    max-width: 70%;
+    padding: 12px 20px;
+    position: relative;
+    line-height: 1.6;
+    background-color: #33334d;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 85%, 90% 100%, 0% 100%);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 
+        3px 3px 8px rgba(0, 0, 0, 0.4),
+        inset 1px 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.message:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        5px 5px 12px rgba(0, 0, 0, 0.5),
+        inset 1px 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.message-wrapper.sent { justify-content: flex-end; }
+.message-wrapper.received { justify-content: flex-start; }
+
+.message.sent {
+    background: linear-gradient(145deg, #482f78, #6c4aa6);
+    color: #fff;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%, 0% 85%);
+}
+
+.message p { margin: 0; font-size: 0.9em; }
+
+.timestamp {
+    font-size: 0.7em;
+    color: #FFD700;
+    display: block;
+    margin-top: 8px;
+    text-align: right;
+    opacity: 0.7;
+}
+.message.received .timestamp { text-align: left; }
+
+.message-form-container {
+    padding: 20px;
+    border-top: 1px solid #533E85;
+    background: rgba(13, 12, 29, 0.5);
+}
+
+.message-form { display: flex; align-items: center; }
+.form-group { flex-grow: 1; }
+
+.form-control {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid #533E85;
+    border-radius: 5px;
+    background: #1c1a33;
+    color: #e0e0e0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+.form-control::placeholder { color: #777; }
+.form-control:focus {
+    outline: none;
+    border-color: #FFD700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+.btn-send {
+    background: transparent;
+    border: 2px solid #FFD700;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    margin-left: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    animation: pulseGlow 3s infinite alternate;
+}
+.btn-send:hover {
+    background: #FFD700;
+    transform: scale(1.1);
+}
+.btn-send svg { color: #FFD700; transition: color 0.3s ease; }
+.btn-send:hover svg { color: #1c1a33; }
+
+@keyframes floatIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+    from { box-shadow: 0 0 6px rgba(255, 215, 0, 0.3); }
+    to { box-shadow: 0 0 18px rgba(255, 215, 0, 0.7); }
+}
+
+</style>
 {% endblock %}

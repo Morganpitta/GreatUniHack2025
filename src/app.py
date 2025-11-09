@@ -23,6 +23,7 @@ import os
 import uuid
 import datetime
 import json
+import models # Re-added this import
 
 dotenv.load_dotenv()
 CRED=os.environ.get("CRED")
@@ -44,11 +45,11 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Sign Up')
 
     def validate_username(self, username):
+        # Assuming you have a models.finduser function
         users = fbdb.reference("users").get()
-        if users:
-            for user in users.values():
-                if user['username'] == username.data:
-                    raise ValidationError('That username is taken. Please choose a different one.')
+        if users and models.finduser(users, username.data):
+             raise ValidationError('That username is taken. Please choose a different one.')
+
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -66,17 +67,17 @@ def index():
         return redirect(url_for('conversations'))
     return redirect(url_for('login'))
 
-import models
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if "user" in session:
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
+        # Using the direct hashing method from your updated code
         hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256')
         user = {"username": form.username.data, "password": hashed_password}
         fbdb.reference("users/" + form.username.data).set(user)
-
+        
         flash('Congratulations, you are now a registered user!', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
@@ -88,7 +89,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user_data = fbdb.reference("users/" + form.username.data).get()
-        if user_data is None or not check_password_hash(user_data['password'], form.password.data):
+        if user_data is None or not check_password_hash(user_data.get('password'), form.password.data):
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
         flash("Logged in!")
@@ -116,10 +117,10 @@ def conversations():
     converstion_list = get_as_list("conversations")
     if converstion_list:
         for i in converstion_list:
-            if i["user1"] == session["user"]:
-                user_ids.append(i["user2"])
-            elif i["user2"] == session["user"]:
-                user_ids.append(i["user1"])
+            if i.get("user1") == session["user"]:
+                user_ids.append(i.get("user2"))
+            elif i.get("user2") == session["user"]:
+                user_ids.append(i.get("user1"))
 
     user_ids = [{"username": i} for i in user_ids]
 
@@ -139,7 +140,7 @@ def new_conversation():
     conversations_list = get_as_list("conversations")
     if conversations_list:
         for i in conversations_list:
-            if {i["user1"], i["user2"]} == {session["user"], username}:
+            if {i.get("user1"), i.get("user2")} == {session["user"], username}:
                 return redirect(url_for('chat', username=username))
 
     ref = fbdb.reference("conversations")
@@ -162,18 +163,16 @@ def chat(username):
         
     conversation = [i for i in converstion_list if {i.get("user1"), i.get("user2")} == {partner, current_user}]
     if not conversation:
-        # Handle case where conversation doesn't exist
         return redirect(url_for('new_conversation', username=partner))
     conversation_id = conversation[0]["id"]
-
 
     form = MessageForm()
     if form.validate_on_submit():
         chats_ref = fbdb.reference("chats/" + conversation_id)
+        # Using ISO format for better cross-platform compatibility
         new_message = {"content": form.message.data, "sender_id": current_user, "timestamp": datetime.datetime.now().isoformat()}
         chats_ref.push(new_message)
 
-        # Emit the new message to the room
         socketio.emit('new_message', new_message, room=conversation_id)
 
         return redirect(url_for('chat', username=username))
@@ -184,17 +183,32 @@ def chat(username):
         for i in full_list:
             if "timestamp" in i:
                 try:
+                    # Prefer ISO format parsing
                     i["timestamp"] = datetime.datetime.fromisoformat(i["timestamp"])
-                except:
-                     i["timestamp"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
+                except (ValueError, TypeError):
+                    # Fallback for old timestamp format
+                    i["timestamp"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
             else:
                 i["timestamp"] = datetime.datetime.now()
             chat_list.append(i)
 
-    messages = sorted(chat_list, key=lambda x: x['timestamp'])
+    messages = sorted(chat_list, key=lambda x: x.get('timestamp'))
 
     return render_template('chat.html', title=f'Chat with {username}',
                            form=form, partner=partner, messages=messages, loggedin=True, conversation_id=conversation_id)
+
+# Re-added the /graph route
+@app.route('/graph')
+def graph():
+    # Data to be visualized. You can replace this with data from a database, API, etc.
+    data = [
+        {"name": "UK", "color": "#D2691E"},
+        {"name": "Germany", "color": "#FF69B4"},
+        {"name": "Brazil", "color": "#1E90FF"},
+        {"name": "Peru", "color": "#32CD32"}
+    ]
+
+    return render_template('graph.html', chart_data=json.dumps(data))
 
 # Socket.IO event handlers
 @socketio.on('join')
