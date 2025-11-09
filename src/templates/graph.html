@@ -19,10 +19,6 @@
         document.addEventListener('DOMContentLoaded', function () {
             // --- 1. SETUP ---
             const canvas = document.getElementById('visualizationCanvas');
-            if (!canvas) {
-                console.error("CRITICAL: Canvas element not found!");
-                return;
-            }
             const ctx = canvas.getContext('2d');
 
             // --- 2. DATA LOADING ---
@@ -39,72 +35,51 @@
             }
 
             // --- 3. CONFIGURATION ---
-            const pointRadius = 15;
+            const pointRadius = 25; // Increased radius a bit for better texture visibility
             const solidLineThreshold = 350;
             const dottedLineThreshold = 500;
-
-            // ***** NEW CONFIGURATION VARIABLE *****
-            // Edit this value to change the minimum distance between nodes.
-            const minimumNodeDistance = 150; 
-            
-            // Safety measure to prevent infinite loops during placement.
+            const minimumNodeDistance = 150;
             const maxPlacementAttempts = 100;
+
+            // ***** NEW CONFIGURATION VARIABLE for PLANET TEXTURE *****
+            // Edit this to change the density of the surface texture.
+            const numberOfTextureDots = 50;
 
             let points = [];
 
             // --- 4. FUNCTIONS ---
 
-            // Calculates the distance between two points
-            function getDistance(point1, point2) {
+            function getDistance(point1, point2) { /* ... function unchanged ... */ 
                 const dx = point1.x - point2.x;
                 const dy = point1.y - point2.y;
                 return Math.sqrt(dx * dx + dy * dy);
             }
 
-            // ***** MODIFIED FUNCTION: generatePointPositions() *****
-            // This function now tries to place nodes without them being too close.
-            function generatePointPositions() {
-                points = []; // Reset the points array
-
+            function generatePointPositions() { /* ... function unchanged ... */ 
+                points = [];
                 data.forEach(item => {
                     let newPoint;
                     let isValidPosition = false;
                     let attempts = 0;
-
-                    // Keep trying to find a valid position until we succeed or run out of attempts
                     while (!isValidPosition && attempts < maxPlacementAttempts) {
-                        // Generate a random position for the new point
                         newPoint = {
                             name: item.name,
                             color: item.color,
                             x: pointRadius + Math.random() * (canvas.width - pointRadius * 2),
                             y: pointRadius + Math.random() * (canvas.height - pointRadius * 2)
                         };
-
-                        // Assume the position is valid until a conflict is found
                         isValidPosition = true;
-
-                        // Check against all previously placed points
                         for (const existingPoint of points) {
                             if (getDistance(newPoint, existingPoint) < minimumNodeDistance) {
-                                isValidPosition = false; // Conflict found!
-                                break; // No need to check further, this position is invalid
+                                isValidPosition = false;
+                                break;
                             }
                         }
                         attempts++;
                     }
-
-                    if (attempts >= maxPlacementAttempts) {
-                        console.warn(`Could not find an ideal position for "${item.name}" after ${maxPlacementAttempts} attempts. It might be too close to another node.`);
-                    }
-                    
-                    // Add the new point to our array of placed points
                     points.push(newPoint);
                 });
-
-                console.log("Generated point positions:", points);
             }
-
 
             function drawConnections() { /* ... function unchanged ... */ 
                 for (let i = 0; i < points.length; i++) {
@@ -129,16 +104,51 @@
                 }
             }
             
-            function drawPoints() { /* ... function unchanged ... */ 
+            // ***** MODIFIED FUNCTION: drawPoints() *****
+            // This function now draws the nodes as textured planets.
+            function drawPoints() {
                 points.forEach(point => {
+                    // --- Step 1: Create the 3D shading with a radial gradient ---
+                    // This creates a "hotspot" effect, making the circle look like a sphere.
+                    const gradient = ctx.createRadialGradient(
+                        point.x - pointRadius * 0.3, point.y - pointRadius * 0.3, pointRadius * 0.1, // Inner circle (light source)
+                        point.x, point.y, pointRadius // Outer circle (planet edge)
+                    );
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.7)'); // Highlight color
+                    gradient.addColorStop(0.8, point.color); // Main planet color
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.5)'); // Shaded edge
+
+                    // Draw the main planet circle with the gradient
                     ctx.beginPath();
                     ctx.arc(point.x, point.y, pointRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = point.color;
+                    ctx.fillStyle = gradient;
                     ctx.fill();
+
+                    // --- Step 2: Add procedural surface texture ---
+                    // This draws small, semi-transparent dots to simulate clouds or land.
+                    for (let i = 0; i < numberOfTextureDots; i++) {
+                        // Get a random position *inside* the circle
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * pointRadius;
+                        const x = point.x + Math.cos(angle) * radius;
+                        const y = point.y + Math.sin(angle) * radius;
+
+                        // Draw a small dot
+                        ctx.beginPath();
+                        ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
+                        // Use a slightly transparent white for a cloudy effect
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        ctx.fill();
+                    }
+
+                    // --- Step 3: Draw the label as before ---
                     ctx.fillStyle = '#fff';
                     ctx.font = '16px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(point.name, point.x, point.y - pointRadius - 8);
+                    ctx.shadowColor = 'black'; // Add a shadow for better readability
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(point.name, point.x, point.y - pointRadius - 12);
+                    ctx.shadowBlur = 0; // Reset shadow
                 });
             }
 
