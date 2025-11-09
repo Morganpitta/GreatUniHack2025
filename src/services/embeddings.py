@@ -11,7 +11,6 @@ OUTPUT_DIM=768
 COLLECTION_NAME='messages'
 
 
-firebase_admin.initialize_app(cred)
 client = genai.Client()
 
 # group users by their location
@@ -39,10 +38,7 @@ class Embedder:
             raise Exception("Error embedding content")
 
 class Firestore:
-    def __init__(self, credential):
-        self.credential = credential
-        # call once
-        # firebase_admin.initialize_app(self.credential)
+    def __init__(self):
         self.db = firestore.client()
     
     def save_to_collection(self, collection_name, embedding):
