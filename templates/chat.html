@@ -54,6 +54,7 @@
                 if (e.key === 'Enter' && !e.shiftKey) { // Submit on Enter, but not Shift+Enter
                     e.preventDefault(); // Prevent default new line
                     this.closest('form').submit();
+                    this.closest('form').reset();
                 }
             });
         }

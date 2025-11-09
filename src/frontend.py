@@ -131,17 +131,12 @@ def chat(username):
         embedding = embedder.embed_content(form.message.data, "RETRIEVAL_DOCUMENT")
         firestore.save_to_collection("mars", embedding)
 
-
-
-        print(f"broadcasting message {partner.id}, {current_user.id}")
         # Notify receiver instantly
         socketio.emit('receive_message', {
             'sender': current_user.id,
             'text': form.message.data,
             'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M')
         }, to=str(partner.id))
-
-        print("broadcasted")
     
         return redirect(url_for('chat', username=username))
 
