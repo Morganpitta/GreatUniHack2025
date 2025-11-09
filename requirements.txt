@@ -3,6 +3,6 @@ Flask-SQLAlchemy
 Flask-Login
 Flask-WTF
 Werkzeug
+Flask-SocketIO
 google-genai
-firebase-admin-firestore
 firebase-admin

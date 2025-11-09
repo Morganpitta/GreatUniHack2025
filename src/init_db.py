@@ -3,6 +3,7 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_socketio import SocketIO
 from services import embeddings
 from firebase_admin import credentials
 import firebase_admin
@@ -20,13 +21,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 try:
     app = firebase_admin.get_app()
 except ValueError as e:
-    cred = credentials.Certificate('/home/george/GreatUniHack/GreatUniHack2025/src/services/space-mouse-4803e-firebase-adminsdk-fbsvc-98226ecde3.json')
+    cred = credentials.Certificate('services/cert.json')
     firebase_admin.initialize_app(cred)
 
 # Extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+socketio = SocketIO(app, manage_session=False)
 
 embedder = embeddings.Embedder("gemini-embedding-001")
 firestore = embeddings.Firestore()
