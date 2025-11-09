@@ -4,19 +4,44 @@
 <div class="form-container">
     <h2>Conversations</h2>
     
-    <div class="new-conversation">
-        <h3>Start a New Conversation</h3>
-        <form method="POST" action="{{ url_for('new_conversation') }}">
+    <!-- This single section now handles both starting and discovering conversations -->
+    <div class="new-conversation-area">
+        <h3>Start or Discover a Conversation</h3>
+        
+        <!-- Part 1: Manual Search -->
+        <form method="POST" action="{{ url_for('new_conversation') }}" class="manual-search-form">
             <div class="form-group">
-                <input type="text" name="username" placeholder="Enter username" required>
+                <input type="text" name="username" placeholder="Enter username to start chat" required>
             </div>
             <button type="submit" class="btn">Start Chat</button>
         </form>
+
+        <!-- Part 2: Integrated Recommendations -->
+        {% if recommended_users %}
+            <div class="recommendations-integrated">
+                <p class="recommendations-title">Or connect with someone new:
+                    <br>(from a new country)
+                </p>
+                <ul>
+                    {% for user in recommended_users %}
+                        <li>
+                            <span>{{ user.username }}</span>
+                            <form method="POST" action="{{ url_for('new_conversation') }}">
+                                <input type="hidden" name="username" value="{{ user.username }}">
+                                <button type="submit" class="btn-recommend">Chat</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
     </div>
 
-    <hr style="border-color: #00aaff; margin: 20px 0;">
+    <hr style="border-color: #00aaff; margin: 30px 0;">
 
+    <!-- This section is now purely for displaying existing chats -->
     <div class="conversation-list">
+        <h3>Your Conversations</h3>
         {% if users %}
             <ul>
                 {% for user in users %}
@@ -32,23 +57,89 @@
 </div>
 
 <style>
-.conversation-list ul {
-    list-style: none;
-    padding: 0;
-}
-.conversation-list li {
-    background: #2a2a3a;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-}
-.conversation-list li a {
-    text-decoration: none;
-    color: #e0e0e0;
-    font-weight: bold;
-}
-.new-conversation {
-    margin-bottom: 20px;
-}
+    /* Main container for starting a chat */
+    .new-conversation-area {
+        background-color: #1e1e2f;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .new-conversation-area h3 {
+        margin-top: 0;
+    }
+
+    /* Styling the manual search form for better alignment */
+    .manual-search-form {
+        display: flex;
+        gap: 10px;
+    }
+    .manual-search-form .form-group {
+        flex-grow: 1; /* Allows the input to take up available space */
+    }
+
+    /* Styling for the integrated recommendations */
+    .recommendations-integrated {
+        margin-top: 25px;
+    }
+    .recommendations-title {
+        color: #aaa;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #3a3a4a;
+        padding-bottom: 10px;
+    }
+    .recommendations-integrated ul {
+        list-style: none;
+        padding: 0;
+    }
+    .recommendations-integrated li {
+        background: #2a2a3a;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .recommendations-integrated span {
+        color: #e0e0e0;
+        font-weight: bold;
+    }
+    .btn-recommend {
+        background-color: #00aaff;
+        color: white;
+        border: none;
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-weight: bold;
+        transition: background-color 0.2s;
+    }
+    .btn-recommend:hover {
+        background-color: #0088cc;
+    }
+
+    /* Styling for the existing conversation list */
+    .conversation-list ul {
+        list-style: none;
+        padding: 0;
+    }
+    .conversation-list li {
+        background: #2a2a3a;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    .conversation-list li:hover {
+        background: #3a3a4a;
+    }
+    .conversation-list li a {
+        text-decoration: none;
+        color: #e0e0e0;
+        font-weight: bold;
+        display: block; /* Makes the entire list item clickable */
+    }
 </style>
 {% endblock %}

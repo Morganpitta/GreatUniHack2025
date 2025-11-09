@@ -140,9 +140,14 @@ def conversations():
             elif i.get("user2") == session["user"]:
                 user_ids.append(i.get("user1"))
 
+    user_country = next(x for x in get_as_list("users") if x["username"] == session["user"])["location"]
+
+    recommended_users = [x for x in get_as_list("users") if x["username"] not in user_ids and x["username"] != session["user"] and x["location"] != user_country]
+    recommended_users = random.sample(recommended_users, 3)
+
     user_ids = [{"username": i} for i in user_ids]
 
-    return render_template('conversations.html', users=user_ids, title='Conversations', loggedin=loggedin)
+    return render_template('conversations.html', users=user_ids, recommended_users=recommended_users, title='Conversations', loggedin=loggedin)
 
 @app.route('/new_conversation', methods=['POST'])
 def new_conversation():
