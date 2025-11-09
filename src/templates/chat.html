@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+<<<<<<< HEAD
 <div class="chat-container">
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -49,15 +50,19 @@
     </div>
     <div class="message-history" id="message-history">
 >>>>>>> 4fb408e (pretty good space theme)
+=======
+<div class="container">
+    <h2>Chat with {{ partner }}</h2>
+    <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+>>>>>>> 0eab52e (websockets stuff)
         {% for message in messages %}
-            <div class="message-wrapper {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
-                <div class="message {% if message.sender_id == session['user'] %}sent{% else %}received{% endif %}">
-                    <p>{{ message.content }}</p>
-                    <span class="timestamp">{{ message.timestamp.strftime('%H:%M') }}</span>
-                </div>
+            <div class="message">
+                <strong>{{ message.sender_id }}:</strong> {{ message.content }}
+                <span class="timestamp" style="font-size: 0.8em; color: #888;">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span>
             </div>
         {% endfor %}
     </div>
+<<<<<<< HEAD
     <div class="message-form-container">
         <form method="POST" action="{{ url_for('chat', username=partner) }}" class="message-form">
             {{ form.hidden_tag() }}
@@ -112,15 +117,60 @@
             </button>
         </form>
     </div>
+=======
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.message.label(class="form-control-label") }}
+            {{ form.message(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+>>>>>>> 0eab52e (websockets stuff)
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', (event) => {
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-<script>
-    const messageHistory = document.getElementById("message-history");
-    if (messageHistory) {
-        messageHistory.scrollTop = messageHistory.scrollHeight;
-    }
+        var conversationId = "{{ conversation_id }}";
+
+        socket.on('connect', function() {
+            socket.emit('join', {room: conversationId});
+        });
+
+        socket.on('new_message', function(msg) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+
+            const senderStrong = document.createElement('strong');
+            senderStrong.textContent = msg.sender_id + ': ';
+            messageDiv.appendChild(senderStrong);
+
+            messageDiv.append(msg.content);
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('timestamp');
+            timestampSpan.style.fontSize = '0.8em';
+            timestampSpan.style.color = '#888';
+            let messageTimestamp = new Date(msg.timestamp);
+            timestampSpan.textContent = ' ' + messageTimestamp.toLocaleString();
+            messageDiv.appendChild(timestampSpan);
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+
+        window.onbeforeunload = function() {
+            socket.emit('leave', {room: conversationId});
+        };
+    });
 </script>
+<<<<<<< HEAD
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
@@ -293,3 +343,6 @@ body {
 =======
 {% endblock %}
 >>>>>>> c9ae7cb (change colour of sent messages)
+=======
+{% endblock %}
+>>>>>>> 0eab52e (websockets stuff)

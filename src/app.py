@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError
+from flask_socketio import SocketIO, join_room, leave_room, emit
 
 # App initialization
 app = Flask(__name__)
@@ -12,11 +13,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Extensions
+socketio = SocketIO(app)
 
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db as fbdb
-from firebase_admin import db as fdb
 import dotenv
 import os
 import uuid
@@ -43,9 +44,11 @@ class RegistrationForm(FlaskForm):
     submit = SubmitField('Sign Up')
 
     def validate_username(self, username):
-        user = models.finduser(fbdb.reference("users").get(),username)
-        if user:
-            raise ValidationError('That username is taken. Please choose a different one.')
+        users = fbdb.reference("users").get()
+        if users:
+            for user in users.values():
+                if user['username'] == username.data:
+                    raise ValidationError('That username is taken. Please choose a different one.')
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -70,11 +73,10 @@ def register():
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = models.makeuser(None,form.username.data,form.password.data)
-        # userref = ref.child("users").push(user)
-        # print(userref.key)
-        fbdb.reference("users/"+form.username.data).set(user)
-        
+        hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256')
+        user = {"username": form.username.data, "password": hashed_password}
+        fbdb.reference("users/" + form.username.data).set(user)
+
         flash('Congratulations, you are now a registered user!', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
@@ -85,68 +87,65 @@ def login():
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
-        password=models.finduser(fbdb.reference("users").get(),form.username.data)
-        # user = User.query.filter_by(username=form.username.data).first()
-        if password is None or not check_password_hash(password,form.password.data):
+        user_data = fbdb.reference("users/" + form.username.data).get()
+        if user_data is None or not check_password_hash(user_data['password'], form.password.data):
             flash('Invalid username or password', 'danger')
             return redirect(url_for('login'))
-        # login_user(user, remember=True)
         flash("Logged in!")
-        session["user"]=form.username.data
+        session["user"] = form.username.data
         return redirect(url_for('index'))
     return render_template('login.html', title='Login', form=form)
 
 @app.route('/logout')
 def logout():
-    session.pop("user",None)
+    session.pop("user", None)
     flash("Logged out!")
     return redirect(url_for('login'))
 
 @app.route('/profile')
 def profile():
     if "user" in session:
-        return render_template('profile.html', title='Profile',user=session["user"])
+        return render_template('profile.html', title='Profile', user=session["user"])
     else:
         return redirect(url_for('login'))
 
 @app.route('/conversations')
 def conversations():
-    loggedin=True
-
+    loggedin = True
     user_ids = []
     converstion_list = get_as_list("conversations")
-    for i in converstion_list:
-        if i["user1"] == session["user"]:
-            user_ids.append(i["user2"])
-        elif i["user2"] == session["user"]:
-            user_ids.append(i["user1"])
+    if converstion_list:
+        for i in converstion_list:
+            if i["user1"] == session["user"]:
+                user_ids.append(i["user2"])
+            elif i["user2"] == session["user"]:
+                user_ids.append(i["user1"])
 
     user_ids = [{"username": i} for i in user_ids]
 
-    return render_template('conversations.html', users=user_ids, title='Conversations',loggedin=loggedin)
-
+    return render_template('conversations.html', users=user_ids, title='Conversations', loggedin=loggedin)
 
 @app.route('/new_conversation', methods=['POST'])
 def new_conversation():
     username = request.form.get('username')
-    if models.finduser(fbdb.reference("users").get(), username) is None:
+    if fbdb.reference("users/" + username).get() is None:
         flash('User not found.', 'danger')
         return redirect(url_for('conversations'))
 
     if username == session["user"]:
         flash('You cannot start a conversation with yourself.', 'danger')
         return redirect(url_for('conversations'))
-    
-    for i in get_as_list("conversations"):
-        if {i["user1"], i["user2"]} == {session["user"], username}:
-            return redirect(url_for('chat', username=username))
-    
-    ref = fdb.reference("conversations")
-    ref.push({"user1": session["user"], "user2": username, "id":str(uuid.uuid4())})
+
+    conversations_list = get_as_list("conversations")
+    if conversations_list:
+        for i in conversations_list:
+            if {i["user1"], i["user2"]} == {session["user"], username}:
+                return redirect(url_for('chat', username=username))
+
+    ref = fbdb.reference("conversations")
+    ref.push({"user1": session["user"], "user2": username, "id": str(uuid.uuid4())})
 
     return redirect(url_for('chat', username=username))
-
-
 
 @app.route('/chat/<username>', methods=['GET', 'POST'])
 def chat(username):
@@ -156,60 +155,65 @@ def chat(username):
     if partner == current_user:
         flash("You cannot chat with yourself.")
         return redirect(url_for('conversations'))
-    
+
     converstion_list = get_as_list("conversations")
-    conversation_id = [i for i in converstion_list if {i["user1"], i["user2"]} == {partner, current_user}][0]["id"]
-    
+    if not converstion_list:
+        return redirect(url_for('conversations'))
+        
+    conversation = [i for i in converstion_list if {i.get("user1"), i.get("user2")} == {partner, current_user}]
+    if not conversation:
+        # Handle case where conversation doesn't exist
+        return redirect(url_for('new_conversation', username=partner))
+    conversation_id = conversation[0]["id"]
+
+
     form = MessageForm()
     if form.validate_on_submit():
-        print(conversation_id)
-        chats_ref = fdb.reference("chats/" + conversation_id)
-        chats_ref.push({"content": form.message.data, "sender_id": current_user, "timestamp": datetime.datetime.now().timestamp()})
+        chats_ref = fbdb.reference("chats/" + conversation_id)
+        new_message = {"content": form.message.data, "sender_id": current_user, "timestamp": datetime.datetime.now().isoformat()}
+        chats_ref.push(new_message)
+
+        # Emit the new message to the room
+        socketio.emit('new_message', new_message, room=conversation_id)
 
         return redirect(url_for('chat', username=username))
 
     chat_list = []
-
     full_list = get_as_list("chats/" + conversation_id)
-    if full_list == None:
-        full_list = []
+    if full_list:
+        for i in full_list:
+            if "timestamp" in i:
+                try:
+                    i["timestamp"] = datetime.datetime.fromisoformat(i["timestamp"])
+                except:
+                     i["timestamp"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
+            else:
+                i["timestamp"] = datetime.datetime.now()
+            chat_list.append(i)
 
-    for i in full_list:
-        print(i)
-        if "timestamp" in i:
-            i["timestamp"] = datetime.datetime.fromtimestamp(float(i["timestamp"]))
-        else:
-            i["timestamp"] = datetime.datetime.fromtimestamp(0.0)
-
-        chat_list.append(i)
-
-    messages = chat_list
+    messages = sorted(chat_list, key=lambda x: x['timestamp'])
 
     return render_template('chat.html', title=f'Chat with {username}',
-                           form=form, partner=partner, messages=messages,loggedin=True)
+                           form=form, partner=partner, messages=messages, loggedin=True, conversation_id=conversation_id)
 
-@app.route('/graph')
-def graph():
-    # Data to be visualized. You can replace this with data from a database, API, etc.
-    data = [
-        {"name": "UK", "color": "#D2691E"},
-        {"name": "Germany", "color": "#FF69B4"},
-        {"name": "Brazil", "color": "#1E90FF"},
-        {"name": "Peru", "color": "#32CD32"}
-    ]
+# Socket.IO event handlers
+@socketio.on('join')
+def on_join(data):
+    room = data['room']
+    join_room(room)
 
-    return render_template('graph.html', chart_data=json.dumps(data))
-
+@socketio.on('leave')
+def on_leave(data):
+    room = data['room']
+    leave_room(room)
 
 def get_as_list(path):
-    data = fdb.reference(path).get()
-
+    data = fbdb.reference(path).get()
     if data is None:
-        return None
-    else:
-        return list(fdb.reference(path).get().values())
+        return []
+    if isinstance(data, dict):
+        return list(data.values())
+    return data
 
 if __name__ == '__main__':
-    # with app.app_context():
-    #     db.create_all()
-    app.run(debug=True)
+    socketio.run(app, debug=True)
