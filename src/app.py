@@ -121,10 +121,12 @@ def logout():
 @app.route('/profile')
 def profile():
     if "user" in session:
+        conversation_num = len([i for i in get_as_list("conversations") if session["user"] in [i["user1"], i["user2"]]])
+
         location = fbdb.reference("users/" + session["user"]).get().get("location")
         if location is None:
             location = "No location given"
-        return render_template('profile.html', title='Profile', user=session["user"],location=location,loggedin=True)
+        return render_template('profile.html', title='Profile', user=session["user"],location=location,conversation_num=conversation_num,loggedin=True)
     else:
         return redirect(url_for('login'))
 
