@@ -1,6 +1,5 @@
-from init_db import socketio, db
+from init_db import socketio
 from flask_socketio import join_room, leave_room
-from database import Message
 
 from flask_login import current_user
 

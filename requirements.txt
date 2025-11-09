@@ -6,3 +6,4 @@ Werkzeug
 Flask-SocketIO
 google-genai
 firebase-admin
+dotenv

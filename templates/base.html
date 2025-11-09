@@ -12,7 +12,7 @@
         <div class="container">
             <a href="{{ url_for('index') }}" class="logo">Galaxy-Chat</a>
             <div class="nav-links">
-                {% if current_user.is_authenticated %}
+                {% if "user" in session %}
                     <a href="{{ url_for('profile') }}">Profile</a>
                     <a href="{{ url_for('conversations') }}">Messages</a>
                     <a href="{{ url_for('logout') }}">Logout</a>
