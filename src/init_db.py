@@ -4,7 +4,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_socketio import SocketIO
-from services import embeddings
+from services import gemini, firestore
 from firebase_admin import credentials
 import firebase_admin
 
@@ -31,5 +31,5 @@ login_manager.login_view = 'login'
 
 socketio = SocketIO(app, manage_session=False)
 
-embedder = embeddings.Embedder("gemini-embedding-001")
-firestore = embeddings.Firestore()
+gemini = gemini.Gemini("gemini-embedding-001")
+firestore = firestore.Firestore()
