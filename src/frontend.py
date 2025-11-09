@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-from init_db import app, login_manager, db, socketio, embedder, firestore
-=======
 from init_db import app, login_manager, db, gemini, firestore
->>>>>>> a1c94e2 (Add text content and prompt generation)
 from database import User, Message
 
 from sqlalchemy import or_
